@@ -2,7 +2,7 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing use-fixtures]]
-  ;;  [clojure.tools.logging :as log]
+   [clojure.tools.logging :as log]
    [com.timezynk.mongo :as mongo]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
   (:import [java.util.concurrent CountDownLatch TimeUnit]
@@ -11,11 +11,14 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
-(deftest check-res
-  (let [res (mongo/insert! :companies {:name "Name"})]
+(deftest insert
+  (let [res (mongo/insert! :users {:name "Name"})]
     (is (= ObjectId
            (-> res :_id type)))
-    (is (= "Name" (:name res)))))
+    (is (= "Name" (:name res))))
+  (let [res (mongo/insert! :users [{:name "1"}
+                                   {:name "2"}])]
+    (is (= 2 (count res)))))
 
 (deftest insert-recursive
   (testing "Correct conversion of data tructure"

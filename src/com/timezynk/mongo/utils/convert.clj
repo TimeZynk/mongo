@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.utils.convert
+(ns ^:no-doc com.timezynk.mongo.utils.convert
   (:require
    [clojure.core.reducers :as r])
   (:import [org.bson Document]))

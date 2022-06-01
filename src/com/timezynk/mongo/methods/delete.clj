@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.delete
+(ns ^:no-doc com.timezynk.mongo.methods.delete
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]])
   (:import [com.mongodb.client.result UpdateResult]))

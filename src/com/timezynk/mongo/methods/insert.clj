@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.insert
+(ns ^:no-doc com.timezynk.mongo.methods.insert
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]]))
 

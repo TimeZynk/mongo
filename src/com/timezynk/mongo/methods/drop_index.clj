@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.drop-index
+(ns ^:no-doc com.timezynk.mongo.methods.drop-index
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]]
    [com.timezynk.mongo.utils.convert :as convert]))

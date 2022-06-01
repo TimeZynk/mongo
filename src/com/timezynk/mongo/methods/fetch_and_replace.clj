@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.fetch-and-replace
+(ns ^:no-doc com.timezynk.mongo.methods.fetch-and-replace
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]])
   (:import [org.bson Document]

@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.create-index
+(ns ^:no-doc com.timezynk.mongo.methods.create-index
   (:require
   ;;  [clojure.tools.logging :as log]
    [com.timezynk.mongo.config :refer [*mongo-session*]]

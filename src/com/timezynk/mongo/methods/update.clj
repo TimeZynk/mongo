@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.update
+(ns ^:no-doc com.timezynk.mongo.methods.update
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]])
   (:import [com.mongodb.client.model UpdateOptions]

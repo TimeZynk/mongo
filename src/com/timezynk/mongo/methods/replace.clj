@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.replace
+(ns ^:no-doc com.timezynk.mongo.methods.replace
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]])
   (:import [com.mongodb.client.model ReplaceOptions]

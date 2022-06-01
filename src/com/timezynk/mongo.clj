@@ -27,7 +27,7 @@
     ClientSession MongoClient MongoClients
     MongoDatabase TransactionBody]))
 
-(defn set-connection ^MongoClient [^String uri]
+(defn ^:no-doc set-connection ^MongoClient [^String uri]
   (-> (MongoClientSettings/builder)
       (.applyConnectionString (ConnectionString. uri))
       (.retryWrites false)
@@ -35,14 +35,29 @@
       (.build)
       (MongoClients/create)))
 
-(defn close-connection []
+(defn ^:no-doc close-connection []
   (.close (:client *mongo-config*)))
 
 (defmacro with-mongo
   "Functionally set up or change mongodb connection. Reverts to earlier settings when leaving scope.
-   uri  - string: database location.
-   db   - string: database to use.
-   body - encapsulated program utilizing the connection."
+   
+   | Parameter | Description |
+   | ---       | --- |
+   | `uri`     | `string` Database location. |
+   | `db`      | `string` Database to use. |
+   | `body`    | Encapsulated program utilizing the connection. |
+   
+   **Returns**
+
+   The result of the last encapsulated expression.
+   
+   **Examples**
+
+   ```Clojure
+   (with-mongo \"mongodb://localhost:27017\" \"my-database\"
+     (insert! :users {:name \"My Name\"})
+     (fetch! :users))
+   ```"
   [^String uri ^String db & body]
   `(let [client# (set-connection ~uri)]
      (binding [*mongo-config* {:client client#
@@ -54,8 +69,23 @@
 
 (defmacro with-db
   "Functionally set up or change database. Reverts to earlier settings when leaving scope.
-   db   - string: name of database to use.
-   body - encapsulated program calling the database."
+   
+   | Parameter | Description |
+   | ---       | --- |
+   | `db`      | `string` Name of database to use. |
+   | `body`    | Encapsulated program calling the database. |
+
+   **Returns**
+
+   The result of the last encapsulated expression.
+
+   **Examples**
+   
+   ```Clojure
+   (with-db \"my-database-2\"
+     (insert! :users {:name \"My Name\"})
+     (fetch! :users))
+   ```"
   [db & body]
   `(binding [*mongo-config* (assoc *mongo-config*
                                    :db (.getDatabase (:client *mongo-config*)
@@ -64,6 +94,7 @@
 
 (defn set-connection!
   "Procedurally set up or change mongodb connection.
+   
    uri - string: database location."
   [^String uri]
   (alter-var-root #'*mongo-config*
@@ -75,13 +106,14 @@
 
 (defn set-database!
   "Procedurally set up or change database.
+   
    db - string: name of database to use."
   [db]
   (let [db (.getDatabase ^MongoClient (:client *mongo-config*)
                          ^String (name db))]
     (alter-var-root #'*mongo-config* merge {:db db})))
 
-(defn- apply-options [result {:keys [limit only skip sort]}]
+(defn- ^:no-doc apply-options [result {:keys [limit only skip sort]}]
   (cond-> result
     limit (.limit limit)
     only  (.projection (convert/clj->doc only))
@@ -90,14 +122,29 @@
 
 (defn fetch
   "Fetch documents from collection.
-   coll    - keyword/string: The collection.
-   query   - map: A standard MongoDB query.
-   options - Optional parameters:
-     limit - int: Number of documents to fetch.
-     only  - map: A MongoDB map of fields to include or exclude.
-     skip  - int: Number of documents to skip before fetching.
-     sort  - map: A MongoDB map of sorting criteria."
-  ([coll]                 (fetch coll {}))
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   | `:limit`     | `optional int` Number of documents to fetch. |
+   | `:only`      | `optional {keyword/string object}` A MongoDB map of fields to include or exclude. |
+   | `:skip`      | `optional int` Number of documents to skip before fetching. |
+   | `:sort`      | `optional {keyword/string object}` A MongoDB map of sorting criteria. |
+
+   **Returns**
+
+   A lazy sequence of matching documents.
+   
+   **Examples**
+
+   ```Clojure
+   ; Fetch five documents from collection :users
+   (fetch :users {} :limit 5)
+   ```"
+  {:arglists '([collection]
+               [collection query & :limit n :only {} :skip n :sort {}])}
+  ([coll] (fetch coll {}))
   ([coll query & options] (-> (fetch-method (coll/get-coll coll)
                                             (convert/clj->doc query))
                               (apply-options options)
@@ -105,24 +152,60 @@
 
 (defn fetch-one
   "Return only the first document retrieved.
-   coll  - keyword/string: The collection.
-   query - map: A standard MongoDB query."
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   
+   **Returns**
+   
+   A single document or `nil`."
+  {:arglists '([collection]
+               [collection query])}
   ([coll]       (fetch-one coll {}))
   ([coll query] (-> (fetch coll query :limit 1)
                     (first))))
 
 (defn fetch-count
   "Count the number of documents returned.
-   coll  - keyword/string: The collection.
-   query - map: A standard MongoDB query."
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   
+   **Returns**
+
+   Number of matching documents."
+  {:arglists '([collection]
+               [collection query])}
   ([coll]       (fetch-count coll {}))
   ([coll query] (count-method (coll/get-coll coll)
                               (convert/clj->doc query))))
 
 (defn insert!
-  "Add one document or a list thereof to a collection.
-   coll - keyword/string: The collection.
-   doc  - map/list(map): A document or a list of documents."
+  "Insert one document or a list thereof in a collection. Inserting a list is atomic.
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `document/s` | `map/list(map)` A document or a list of documents. |
+   
+   **Returns**
+
+   The document/s with `_id` fields, either a single document or a lazy sequence.
+
+   **Examples**
+
+   ```Clojure
+   (insert! :users {:name \"Alice\"})
+
+   (insert! :users [{:name \"Alice\"}
+                    {:name \"Bob\"}])
+   ```"
+  {:arglists '([collection document]
+               [collection document-list])}
   [coll doc]
   (let [doc (convert/clj->doc doc)]
     (insert-method (coll/get-coll coll) doc)
@@ -130,11 +213,27 @@
 
 (defn update!
   "Update matching documents.
-   coll    - keyword/string: The collection.
-   query   - map: A standard MongoDB query.
-   update  - map: A valid update document. Must use $set or $push.
-   options - Optional parameters:
-     upsert? - boolean: If no document is found, create a new one. Default is don't create."
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   | `update`     | `{keyword/string object}` A valid update document. Must use `$set` or `$push`, throws exception otherwise. |
+   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
+
+   **Returns**
+
+   ```Clojure
+   {:matched-count <number of matching documents>
+    :modified-count <number of modified documents>}
+   ```
+   
+   **Examples**
+
+   ```Clojure
+   (update!)
+   ```"
+  {:arglists '([collection query update & :upsert? b])}
   [coll query update & options]
   (let [result (update-method (coll/get-coll coll)
                               (convert/clj->doc query)
@@ -145,11 +244,27 @@
 
 (defn update-one!
   "Update first matching document.
-   coll    - keyword/string: The collection.
-   query   - map: A standard MongoDB query.
-   update  - map: A valid update document. Must use $set or $push.
-   options - Optional parameters:
-     upsert? - boolean: If no document is found, create a new one. Default is don't create."
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   | `update`     | `{keyword/string object}` A valid update document. Must use $set or $push. |
+   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   
+   **Returns**
+   
+   ```Clojure
+   {:matched-count <0 or 1>
+    :modified-count <0 or 1>}
+   ```
+   
+   **Examples**
+
+   ```Clojure
+   (update-one!)
+   ```"
+  {:arglists '([collection query update & :upsert? b])}
   [coll query update & options]
   (let [result (update-one-method (coll/get-coll coll)
                                   (convert/clj->doc query)
@@ -160,11 +275,21 @@
 
 (defn replace-one!
   "Replace a single document.
-   coll  - keyword/string: The collection.
-   query - map: A standard MongoDB query.
-   doc   - map: The new document.
-   Optional parameters:
-     upsert? - boolean: If no document is found, create a new one. Default is don't create."
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `map` A standard MongoDB query. |
+   | `document`   | `map` The new document. |
+   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
+
+   **Returns**
+
+   ```Clojure
+   {:matched-count <0 or 1>
+    :modified-count <0 or 1>}
+   ```"
+  {:arglists '([collection query document & :upsert? b])}
   [coll query doc & options]
   (let [result (replace-method (coll/get-coll coll)
                                (convert/clj->doc query)
@@ -175,10 +300,18 @@
 
 (defn delete!
   "Delete matching documents.
-   coll  - keyword/string: The collection.
-   query - map: A standard MongoDB query.
-   Optional parameters:
-     None yet."
+
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `map` A standard MongoDB query. |
+   
+   **Returns**
+
+   ```Clojure
+   {:deleted-count <number of matching documents>}
+   ```"
+  {:arglists '([collection query])}
   [coll query & options]
   (let [result (delete-method (coll/get-coll coll)
                               (convert/clj->doc query)
@@ -187,17 +320,39 @@
 
 (defn delete-one!
   "Delete first matching document.
-   coll  - keyword/string: The collection.
-   query - map: A standard MongoDB query.
-   Optional parameters:
-     None yet."
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `query`      | `map` A standard MongoDB query. |
+   
+   **Returns**
+
+   ```Clojure
+   {:deleted-count <number of matching documents>}
+   ```"
+  {:arglists '([collection query])}
   [coll query & options]
   (let [result (delete-one-method (coll/get-coll coll)
                                   (convert/clj->doc query)
                                   options)]
     {:deleted-count (.getDeletedCount result)}))
 
-(defn fetch-and-update! [coll query update & options]
+(defn fetch-and-update!
+  "Update first matching document.
+   
+   | Parameter     | Description |
+   | ---           | --- |
+   | `collection`  | `keyword/string` The collection. |
+   | `query`       | `map` A standard MongoDB query. |
+   | `return-new?` | `optional boolean` Return the updated document? Default if `false`. |
+   | `:upsert?`    | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   
+   **Returns**
+
+   A single document or nil."
+  {:arglists '([collection query & :return-new? b :upsert? b])}
+  [coll query update & options]
   (-> (fetch-and-update-method (coll/get-coll coll)
                                (convert/clj->doc query)
                                (convert/clj->doc update)
@@ -220,7 +375,19 @@
 
 (defmacro transaction
   "Functionally perform a transaction. Encapsulated database requests are queued and then
-   atomically executed when the function goes out of scope."
+   atomically executed when the function goes out of scope.
+
+   **Returns**
+
+   The result of the last encapsulated expression.
+
+   **Examples**
+   
+   ```Clojure
+   (transaction
+    (insert! :users {:name \"My Name\"})
+    (fetch! :users))
+   ```"
   [& body]
   `(binding [*mongo-session* ^ClientSession (.startSession (:client *mongo-config*))]
      (let [txn-body# (reify TransactionBody
@@ -233,8 +400,25 @@
 
 (defn aggregate
   "MongoDB aggregation.
-   coll     - keyword/string: Collection name.
-   pipeline - list(map): A list containing the request pipeline documents."
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` Collection name. |
+   | `pipeline`   | `list {keyword/string {}}` A list containing the request pipeline documents. |
+
+   **Returns**
+
+   Aggregation result.
+
+   **Examples**
+   
+   ```Clojure
+   (aggregate :users
+              [{:$match {:age {:$gte 20}}}
+               {:$project {:_id 0
+                           :name 1}}])
+   ```"
+  {:arglists '([collection pipeline])}
   [coll pipeline]
   (-> (aggregate-method (coll/get-coll coll)
                         (convert/clj->doc pipeline))
@@ -247,14 +431,27 @@
 
 (defn create-index!
   "Create an index for a collection.
-   coll - keyword/string: Collection name.
-   keys - map/list(keyword/string): A document or a list of keywords or strings.
-   Optional parameters:
-     background                - boolean: Create the index in the background.
-     name                      - string: A custom name for the index.
-     partial-filter-expression - map: A filter expression for the index.
-     sparse                    - boolean: Allow null values.
-     unique                    - boolean: Index values must be unique."
+   
+   | Parameter                    | Description |
+   | ---                          | --- |
+   | `collection`                 | `keyword/string` Collection name. |
+   | `keys`                       | `map/list(keyword/string)` A document or a list of keywords or strings. |
+   | `:background`                | `optional boolean` Create the index in the background. Default `false`. |
+   | `:name`                      | `optional string` A custom name for the index. Default `false`. |
+   | `:partial-filter-expression` | `optional map` A filter expression for the index. |
+   | `:sparse`                    | `optional boolean` Allow null values. Default `false`. |
+   | `:unique`                    | `optional boolean` Index values must be unique. Default `false`. |
+   
+   **Returns**
+   
+   The index name.
+
+   **Examples**
+   
+   ```Clojure
+   (create-index!)
+   ```"
+  {:arglists '([collection keys & :background b :name s :partial-filter-expression {} :sparse b :unique b])}
   [coll keys & options]
   (create-index-method (coll/get-coll coll)
                        (if (map? keys)

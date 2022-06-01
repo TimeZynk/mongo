@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.create-coll
+(ns ^:no-doc com.timezynk.mongo.methods.create-coll
   (:require
    [com.timezynk.mongo.config :refer [*mongo-config* *mongo-session*]]))
 
