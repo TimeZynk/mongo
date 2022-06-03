@@ -4,6 +4,7 @@
           Requires MongoDB version 4.4 or later."}
   (:require
    [com.timezynk.mongo.config :refer [*mongo-config* *mongo-session*]]
+   [com.timezynk.mongo.connection :as conn]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.count :refer [count-method]]
    [com.timezynk.mongo.methods.create-coll :refer [create-coll-method]]
@@ -19,33 +20,54 @@
    [com.timezynk.mongo.methods.insert :refer [insert-method]]
    [com.timezynk.mongo.methods.replace :refer [replace-method]]
    [com.timezynk.mongo.methods.update :refer [update-method update-one-method]]
+   [com.timezynk.mongo.options :as options]
    [com.timezynk.mongo.utils.coll :as coll]
    [com.timezynk.mongo.utils.convert :as convert])
   (:import
-   [com.mongodb ConnectionString MongoClientSettings WriteConcern]
-   [com.mongodb.client
-    ClientSession MongoClient MongoClients
-    MongoDatabase TransactionBody]))
+   [com.mongodb.client ClientSession MongoClients TransactionBody]
+   [com.mongodb.client.model Collation CollationAlternate CollationCaseFirst CollationMaxVariable CollationStrength]))
 
-(defn ^:no-doc set-connection ^MongoClient [^String uri]
-  (-> (MongoClientSettings/builder)
-      (.applyConnectionString (ConnectionString. uri))
-      (.retryWrites false)
-      (.writeConcern WriteConcern/ACKNOWLEDGED)
-      (.build)
-      (MongoClients/create)))
+(defn connection
+  "Create a connection object.
+   
+   | Parameter        | Description |
+   | ---              | --- |
+   | `uri`            | `string` Database location. |
+   | `:retry-writes`  | `optional boolean` Sets whether writes should be retried if they fail due to a network error. Default is `false`. |
+   | `:write-concern` | `optional atom` Set write concern: |
+   |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default. |
+   |                  | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. |
+   |                  | `:unacknowledged` Write operations that use this write concern will return as soon as the message is written to the socket. |
+   |                  | `:w1` Write operations that use this write concern will wait for acknowledgement from a single member. |
+   |                  | `:w2` Write operations that use this write concern will wait for acknowledgement from two members. |
+   |                  | `:w3` Write operations that use this write concern will wait for acknowledgement from three members. |
+   
+   **Returns**
+   
+   The connection object.
+   
+   **Examples**
+   
+   ```Clojure
+   ; Create a connection with default options
+   (connection \"mongodb://localhost:27017\")
 
-(defn ^:no-doc close-connection []
-  (.close (:client *mongo-config*)))
+   ; Create a custom connection
+   (connection \"mongodb://localhost:27017\" :retry-writes true :write-concern :w2)
+   ```"
+  {:arglists '([<uri> & :retry-writes <boolean> :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
+  [^String uri & options]
+  (conn/create-connection-settings uri options))
 
 (defmacro with-mongo
   "Functionally set up or change mongodb connection. Reverts to earlier settings when leaving scope.
    
-   | Parameter | Description |
-   | ---       | --- |
-   | `uri`     | `string` Database location. |
-   | `db`      | `string` Database to use. |
-   | `body`    | Encapsulated program utilizing the connection. |
+   | Parameter    | Description |
+   | ---          | --- |
+   | `uri`        | `string` Database location. |
+   | 'connection' | A connection object. |
+   | `db`         | `string` Database to use. |
+   | `body`       | Encapsulated program utilizing the connection. |
    
    **Returns**
 
@@ -58,14 +80,19 @@
      (insert! :users {:name \"My Name\"})
      (fetch! :users))
    ```"
-  [^String uri ^String db & body]
-  `(let [client# (set-connection ~uri)]
+  {:arglists '([<uri> <db> & <body>]
+               [<connection> <db> & <body>])}
+  [conn ^String db & body]
+  `(let [client# (-> (if (= (type ~conn) String)
+                       (connection ~conn)
+                       ~conn)
+                     (MongoClients/create))]
      (binding [*mongo-config* {:client client#
                                :db     (.getDatabase client# ~db)}]
        (try
          ~@body
          (finally
-           (close-connection))))))
+           (.close (:client *mongo-config*)))))))
 
 (defmacro with-db
   "Functionally set up or change database. Reverts to earlier settings when leaving scope.
@@ -86,39 +113,89 @@
      (insert! :users {:name \"My Name\"})
      (fetch! :users))
    ```"
+  {:arglists '(<db> & <body>)}
   [db & body]
   `(binding [*mongo-config* (assoc *mongo-config*
                                    :db (.getDatabase (:client *mongo-config*)
                                                      ~db))]
      ~@body))
 
-(defn set-connection!
-  "Procedurally set up or change mongodb connection.
+(defn collation
+  "Create collation.
    
-   uri - string: database location."
-  [^String uri]
-  (alter-var-root #'*mongo-config*
-                  (constantly
-                   (try
-                     (close-connection)
-                     (finally
-                       (assoc *mongo-config* :client (set-connection uri)))))))
+   | Parameter           | Description |
+   | ---                 | --- |
+   | `:alternate`        | `optional atom` Should consider whitespace and punctuation as base characters for purposes of comparison. |
+   |                     | `:non-ignorable`  |
+   |                     | `:shifted`  |
+   | `:backwards`        | `optional boolean` Whether strings with diacritics sort from back of the string, such as with some French dictionary ordering. |
+   | `:case-first`       | `optional atom` Sort order of case differences during tertiary level comparisons. |
+   | `:case-level`       | `optional boolean` Flag that determines whether to include case comparison at strength level 1 or 2. |
+   | `:locale`           | `optional string` ICU locale. |
+   | `:max-variable`     | `optional atom` Field that determines up to which characters are considered ignorable when alternate: \"shifted\". Has no effect if alternate: \"non-ignorable\" |
+   | `:normalization`    | `optional boolean` Determines whether to check if text require normalization and to perform normalization. |
+   | `:numeric-ordering` | `optional boolean` Compare numeric strings as numbers or as strings. |
+   | `:strength`         | `optional atom` The level of comparison to perform. |
 
-(defn set-database!
-  "Procedurally set up or change database.
-   
-   db - string: name of database to use."
-  [db]
-  (let [db (.getDatabase ^MongoClient (:client *mongo-config*)
-                         ^String (name db))]
-    (alter-var-root #'*mongo-config* merge {:db db})))
+   For more details, see the [manual page on collation](https://www.mongodb.com/docs/v5.3/reference/collation/).
 
-(defn- ^:no-doc apply-options [result {:keys [limit only skip sort]}]
-  (cond-> result
-    limit (.limit limit)
-    only  (.projection (convert/clj->doc only))
-    skip  (.skip skip)
-    sort  (.sort (convert/clj->doc sort))))
+   **Returns**
+
+   The collation object.
+
+   **Examples**
+
+   ```Clojure
+   (collation)
+   ```"
+  {:arglists '([& :alternate [:non-ignorable :shifted] :backwards <boolean> :case-first [:lower :off :upper] :case-level <boolean>
+                :locale <string> :max-variable [:punct :space] :normalization <boolean> :numeric-ordering <boolean>
+                :strength [:identical :primary :quaternary :secondary :tertiary]])}
+  [& {:keys [alternate backwards case-level case-first locale max-variable normalization numeric-ordering strength]}]
+  (cond-> (Collation/builder)
+    alternate        (.collationAlternate (case alternate
+                                            :non-ignorable CollationAlternate/NON_IGNORABLE
+                                            :shifted       CollationAlternate/SHIFTED))
+    backwards        (.backwards backwards)
+    case-first       (.collationCaseFirst (case case-first
+                                            :lower CollationCaseFirst/LOWER
+                                            :off   CollationCaseFirst/OFF
+                                            :upper CollationCaseFirst/UPPER))
+    case-level       (.caseLevel case-level)
+    locale           (.locale locale)
+    max-variable     (.collationMaxVariable (case max-variable
+                                              :punct CollationMaxVariable/PUNCT
+                                              :space CollationMaxVariable/SPACE))
+    strength         (.collationStrength (case strength
+                                           :identical  CollationStrength/IDENTICAL
+                                           :primary    CollationStrength/PRIMARY
+                                           :quaternary CollationStrength/QUATERNARY
+                                           :secondary  CollationStrength/SECONDARY
+                                           :tertiary   CollationStrength/TERTIARY))
+    normalization    (.normalization normalization)
+    numeric-ordering (.numericOrdering numeric-ordering)
+    true             (.build)))
+
+;; (defn set-connection!
+;;   "Procedurally set up or change mongodb connection.
+
+;;    uri - string: database location."
+;;   [^String uri]
+;;   (alter-var-root #'*mongo-config*
+;;                   (constantly
+;;                    (try
+;;                      (conn/close-connection)
+;;                      (finally
+;;                        (assoc *mongo-config* :client (conn/set-connection uri)))))))
+
+;; (defn set-database!
+;;   "Procedurally set up or change database.
+
+;;    db - string: name of database to use."
+;;   [db]
+;;   (let [db (.getDatabase ^MongoClient (:client *mongo-config*)
+;;                          ^String (name db))]
+;;     (alter-var-root #'*mongo-config* merge {:db db})))
 
 (defn fetch
   "Fetch documents from collection.
@@ -126,11 +203,11 @@
    | Parameter    | Description |
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
-   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   | `query`      | `map` A standard MongoDB query. |
    | `:limit`     | `optional int` Number of documents to fetch. |
-   | `:only`      | `optional {keyword/string object}` A MongoDB map of fields to include or exclude. |
+   | `:only`      | `optional map` A MongoDB map of fields to include or exclude. |
    | `:skip`      | `optional int` Number of documents to skip before fetching. |
-   | `:sort`      | `optional {keyword/string object}` A MongoDB map of sorting criteria. |
+   | `:sort`      | `optional map` A MongoDB map of sorting criteria. |
 
    **Returns**
 
@@ -142,12 +219,12 @@
    ; Fetch five documents from collection :users
    (fetch :users {} :limit 5)
    ```"
-  {:arglists '([collection]
-               [collection query & :limit n :only {} :skip n :sort {}])}
+  {:arglists '([<collection>]
+               [<collection> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
   ([coll] (fetch coll {}))
   ([coll query & options] (-> (fetch-method (coll/get-coll coll)
                                             (convert/clj->doc query))
-                              (apply-options options)
+                              (options/apply-options options)
                               (convert/it->clj))))
 
 (defn fetch-one
@@ -156,7 +233,7 @@
    | Parameter    | Description |
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
-   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   | `query`      | `map` A standard MongoDB query. |
    
    **Returns**
    
@@ -173,7 +250,7 @@
    | Parameter    | Description |
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
-   | `query`      | `{keyword/string object}` A standard MongoDB query. |
+   | `query`      | `map` A standard MongoDB query. |
    
    **Returns**
 
@@ -187,10 +264,11 @@
 (defn insert!
   "Insert one document or a list thereof in a collection. Inserting a list is atomic.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `collection` | `keyword/string` The collection. |
-   | `document/s` | `map/list(map)` A document or a list of documents. |
+   | Parameter       | Description |
+   | ---             | --- |
+   | `collection`    | `keyword/string` The collection. |
+   | `document`      | `map` A document. |
+   | `document-list` | `list(map)` A list of documents. |
    
    **Returns**
 
@@ -217,8 +295,8 @@
    | Parameter    | Description |
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
-   | `query`      | `{keyword/string object}` A standard MongoDB query. |
-   | `update`     | `{keyword/string object}` A valid update document. Must use `$set` or `$push`, throws exception otherwise. |
+   | `query`      | `map` A standard MongoDB query. |
+   | `update`     | `map` A valid update document. Must use `$set` or `$push`, throws exception otherwise. |
    | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
 
    **Returns**
@@ -248,8 +326,8 @@
    | Parameter    | Description |
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
-   | `query`      | `{keyword/string object}` A standard MongoDB query. |
-   | `update`     | `{keyword/string object}` A valid update document. Must use $set or $push. |
+   | `query`      | `map` A standard MongoDB query. |
+   | `update`     | `map` A valid update document. Must use `$set` or `$push`, throws exception otherwise. |
    | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
    
    **Returns**
@@ -329,7 +407,7 @@
    **Returns**
 
    ```Clojure
-   {:deleted-count <number of matching documents>}
+   {:deleted-count <0 or 1>}
    ```"
   {:arglists '([collection query])}
   [coll query & options]
@@ -404,7 +482,7 @@
    | Parameter    | Description |
    | ---          | --- |
    | `collection` | `keyword/string` Collection name. |
-   | `pipeline`   | `list {keyword/string {}}` A list containing the request pipeline documents. |
+   | `pipeline`   | The request pipeline queries. |
 
    **Returns**
 
@@ -414,12 +492,12 @@
    
    ```Clojure
    (aggregate :users
-              [{:$match {:age {:$gte 20}}}
-               {:$project {:_id 0
-                           :name 1}}])
+              {:$match {:age {:$gte 20}}}
+              {:$project {:_id 0
+                          :name 1}})
    ```"
-  {:arglists '([collection pipeline])}
-  [coll pipeline]
+  {:arglists '([collection & pipeline])}
+  [coll & pipeline]
   (-> (aggregate-method (coll/get-coll coll)
                         (convert/clj->doc pipeline))
       (convert/it->clj)))
@@ -437,7 +515,7 @@
    | `collection`                 | `keyword/string` Collection name. |
    | `keys`                       | `map/list(keyword/string)` A document or a list of keywords or strings. |
    | `:background`                | `optional boolean` Create the index in the background. Default `false`. |
-   | `:name`                      | `optional string` A custom name for the index. Default `false`. |
+   | `:name`                      | `optional string` A custom name for the index. |
    | `:partial-filter-expression` | `optional map` A filter expression for the index. |
    | `:sparse`                    | `optional boolean` Allow null values. Default `false`. |
    | `:unique`                    | `optional boolean` Index values must be unique. Default `false`. |
@@ -451,7 +529,7 @@
    ```Clojure
    (create-index!)
    ```"
-  {:arglists '([collection keys & :background b :name s :partial-filter-expression {} :sparse b :unique b])}
+  {:arglists '([<collection> <keys> & :background <boolean> :name <string> :partial-filter-expression {} :sparse <boolean> :unique <boolean>])}
   [coll keys & options]
   (create-index-method (coll/get-coll coll)
                        (if (map? keys)
@@ -468,8 +546,16 @@
       (get-collections-method)
       (convert/it->clj)))
 
-(defn create-collection! [name]
-  (create-coll-method name))
+(defn create-collection!
+  "Create collection.
+   
+   | Parameter                    | Description |
+   | ---                          | --- |
+   | 'name`       | `keyword/string` Collection name. |
+   | `:collation` | `optional collation object` The collation of the collection. |"
+  {:arglists '([<name> & :collation <collation object>])}
+  [name & options]
+  (create-coll-method name options))
 
 (defn drop-collection! [coll]
   (drop-coll-method (coll/get-coll coll)))

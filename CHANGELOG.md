@@ -1,3 +1,3 @@
-# Version 0.5
+# Version 1.0
 
-Using the modern Java API for MongoDB client.
+Not there yet.
