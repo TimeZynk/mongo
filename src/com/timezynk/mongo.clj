@@ -4,13 +4,14 @@
           Requires MongoDB version 4.4 or later."}
   (:require
    [com.timezynk.mongo.config :refer [*mongo-config* *mongo-session*]]
-   [com.timezynk.mongo.connection :as conn]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
+   [com.timezynk.mongo.methods.collation :refer [collation-method]]
+   [com.timezynk.mongo.methods.connection :refer [connection-method]]
    [com.timezynk.mongo.methods.count :refer [count-method]]
-   [com.timezynk.mongo.methods.create-coll :refer [create-coll-method]]
+   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method]]
    [com.timezynk.mongo.methods.create-index :refer [create-index-method]]
    [com.timezynk.mongo.methods.delete :refer [delete-method delete-one-method]]
-   [com.timezynk.mongo.methods.drop-coll :refer [drop-coll-method]]
+   [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
    [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
    [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method]]
@@ -20,21 +21,22 @@
    [com.timezynk.mongo.methods.insert :refer [insert-method]]
    [com.timezynk.mongo.methods.replace :refer [replace-method]]
    [com.timezynk.mongo.methods.update :refer [update-method update-one-method]]
-   [com.timezynk.mongo.options :as options]
-   [com.timezynk.mongo.utils.coll :as coll]
+   [com.timezynk.mongo.utils.collection :as coll]
    [com.timezynk.mongo.utils.convert :as convert])
   (:import
+  ;;  [com.mongodb MongoClientSettings]
    [com.mongodb.client ClientSession MongoClients TransactionBody]
-   [com.mongodb.client.model Collation CollationAlternate CollationCaseFirst CollationMaxVariable CollationStrength]))
+  ;;  [com.mongodb.client.model Collation]
+   ))
 
-(defn connection
+(defn connection ^MongoClientSettings
   "Create a connection object.
    
    | Parameter        | Description |
    | ---              | --- |
    | `uri`            | `string` Database location. |
    | `:retry-writes`  | `optional boolean` Sets whether writes should be retried if they fail due to a network error. Default is `false`. |
-   | `:write-concern` | `optional atom` Set write concern: |
+   | `:write-concern` | `optional enum` Set write concern: |
    |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default. |
    |                  | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. |
    |                  | `:unacknowledged` Write operations that use this write concern will return as soon as the message is written to the socket. |
@@ -57,7 +59,8 @@
    ```"
   {:arglists '([<uri> & :retry-writes <boolean> :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
   [^String uri & options]
-  (conn/create-connection-settings uri options))
+  (-> (connection-method uri options)
+      (.build)))
 
 (defmacro with-mongo
   "Functionally set up or change mongodb connection. Reverts to earlier settings when leaving scope.
@@ -65,7 +68,7 @@
    | Parameter    | Description |
    | ---          | --- |
    | `uri`        | `string` Database location. |
-   | 'connection' | A connection object. |
+   | `connection` | A connection object. |
    | `db`         | `string` Database to use. |
    | `body`       | Encapsulated program utilizing the connection. |
    
@@ -120,22 +123,32 @@
                                                      ~db))]
      ~@body))
 
-(defn collation
+(defn collation ^Collation
   "Create collation.
    
    | Parameter           | Description |
    | ---                 | --- |
-   | `:alternate`        | `optional atom` Should consider whitespace and punctuation as base characters for purposes of comparison. |
+   | `:alternate`        | `optional enum` Should consider whitespace and punctuation as base characters for purposes of comparison. |
    |                     | `:non-ignorable`  |
    |                     | `:shifted`  |
    | `:backwards`        | `optional boolean` Whether strings with diacritics sort from back of the string, such as with some French dictionary ordering. |
-   | `:case-first`       | `optional atom` Sort order of case differences during tertiary level comparisons. |
+   | `:case-first`       | `optional enum` Sort order of case differences during tertiary level comparisons. |
+   |                     | `:lower`  |
+   |                     | `:off`  |
+   |                     | `:upper`  |
    | `:case-level`       | `optional boolean` Flag that determines whether to include case comparison at strength level 1 or 2. |
    | `:locale`           | `optional string` ICU locale. |
-   | `:max-variable`     | `optional atom` Field that determines up to which characters are considered ignorable when alternate: \"shifted\". Has no effect if alternate: \"non-ignorable\" |
+   | `:max-variable`     | `optional enum` Field that determines up to which characters are considered ignorable when alternate: \"shifted\". Has no effect if alternate: \"non-ignorable\" |
+   |                     | `:punct`  |
+   |                     | `:space`  |
    | `:normalization`    | `optional boolean` Determines whether to check if text require normalization and to perform normalization. |
    | `:numeric-ordering` | `optional boolean` Compare numeric strings as numbers or as strings. |
-   | `:strength`         | `optional atom` The level of comparison to perform. |
+   | `:strength`         | `optional enum` The level of comparison to perform. |
+   |                     | `:identical`  |
+   |                     | `:primary`  |
+   |                     | `:secondary`  |
+   |                     | `:tertiary`  |
+   |                     | `:quaternary`  |
 
    For more details, see the [manual page on collation](https://www.mongodb.com/docs/v5.3/reference/collation/).
 
@@ -151,30 +164,9 @@
   {:arglists '([& :alternate [:non-ignorable :shifted] :backwards <boolean> :case-first [:lower :off :upper] :case-level <boolean>
                 :locale <string> :max-variable [:punct :space] :normalization <boolean> :numeric-ordering <boolean>
                 :strength [:identical :primary :quaternary :secondary :tertiary]])}
-  [& {:keys [alternate backwards case-level case-first locale max-variable normalization numeric-ordering strength]}]
-  (cond-> (Collation/builder)
-    alternate        (.collationAlternate (case alternate
-                                            :non-ignorable CollationAlternate/NON_IGNORABLE
-                                            :shifted       CollationAlternate/SHIFTED))
-    backwards        (.backwards backwards)
-    case-first       (.collationCaseFirst (case case-first
-                                            :lower CollationCaseFirst/LOWER
-                                            :off   CollationCaseFirst/OFF
-                                            :upper CollationCaseFirst/UPPER))
-    case-level       (.caseLevel case-level)
-    locale           (.locale locale)
-    max-variable     (.collationMaxVariable (case max-variable
-                                              :punct CollationMaxVariable/PUNCT
-                                              :space CollationMaxVariable/SPACE))
-    strength         (.collationStrength (case strength
-                                           :identical  CollationStrength/IDENTICAL
-                                           :primary    CollationStrength/PRIMARY
-                                           :quaternary CollationStrength/QUATERNARY
-                                           :secondary  CollationStrength/SECONDARY
-                                           :tertiary   CollationStrength/TERTIARY))
-    normalization    (.normalization normalization)
-    numeric-ordering (.numericOrdering numeric-ordering)
-    true             (.build)))
+  [& options]
+  (-> (collation-method options)
+      (.build)))
 
 ;; (defn set-connection!
 ;;   "Procedurally set up or change mongodb connection.
@@ -222,9 +214,9 @@
   {:arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
   ([coll] (fetch coll {}))
-  ([coll query & options] (-> (fetch-method (coll/get-coll coll)
-                                            (convert/clj->doc query))
-                              (options/apply-options options)
+  ([coll query & options] (-> (fetch-method (coll/get-collection coll)
+                                            (convert/clj->doc query)
+                                            options)
                               (convert/it->clj))))
 
 (defn fetch-one
@@ -258,7 +250,7 @@
   {:arglists '([collection]
                [collection query])}
   ([coll]       (fetch-count coll {}))
-  ([coll query] (count-method (coll/get-coll coll)
+  ([coll query] (count-method (coll/get-collection coll)
                               (convert/clj->doc query))))
 
 (defn insert!
@@ -286,7 +278,7 @@
                [collection document-list])}
   [coll doc]
   (let [doc (convert/clj->doc doc)]
-    (insert-method (coll/get-coll coll) doc)
+    (insert-method (coll/get-collection coll) doc)
     (convert/doc->clj doc)))
 
 (defn update!
@@ -313,7 +305,7 @@
    ```"
   {:arglists '([collection query update & :upsert? b])}
   [coll query update & options]
-  (let [result (update-method (coll/get-coll coll)
+  (let [result (update-method (coll/get-collection coll)
                               (convert/clj->doc query)
                               (convert/clj->doc update)
                               options)]
@@ -344,7 +336,7 @@
    ```"
   {:arglists '([collection query update & :upsert? b])}
   [coll query update & options]
-  (let [result (update-one-method (coll/get-coll coll)
+  (let [result (update-one-method (coll/get-collection coll)
                                   (convert/clj->doc query)
                                   (convert/clj->doc update)
                                   options)]
@@ -369,7 +361,7 @@
    ```"
   {:arglists '([collection query document & :upsert? b])}
   [coll query doc & options]
-  (let [result (replace-method (coll/get-coll coll)
+  (let [result (replace-method (coll/get-collection coll)
                                (convert/clj->doc query)
                                (convert/clj->doc doc)
                                options)]
@@ -391,7 +383,7 @@
    ```"
   {:arglists '([collection query])}
   [coll query & options]
-  (let [result (delete-method (coll/get-coll coll)
+  (let [result (delete-method (coll/get-collection coll)
                               (convert/clj->doc query)
                               options)]
     {:deleted-count (.getDeletedCount result)}))
@@ -411,7 +403,7 @@
    ```"
   {:arglists '([collection query])}
   [coll query & options]
-  (let [result (delete-one-method (coll/get-coll coll)
+  (let [result (delete-one-method (coll/get-collection coll)
                                   (convert/clj->doc query)
                                   options)]
     {:deleted-count (.getDeletedCount result)}))
@@ -431,7 +423,7 @@
    A single document or nil."
   {:arglists '([collection query & :return-new? b :upsert? b])}
   [coll query update & options]
-  (-> (fetch-and-update-method (coll/get-coll coll)
+  (-> (fetch-and-update-method (coll/get-collection coll)
                                (convert/clj->doc query)
                                (convert/clj->doc update)
                                options)
@@ -439,7 +431,7 @@
 
 ; TODO: test
 (defn fetch-and-replace! [coll query doc & options]
-  (-> (fetch-and-replace-method (coll/get-coll coll)
+  (-> (fetch-and-replace-method (coll/get-collection coll)
                                 (convert/clj->doc query)
                                 (convert/clj->doc doc)
                                 options)
@@ -447,7 +439,7 @@
 
 ; TODO: test
 (defn fetch-and-delete! [coll query]
-  (-> (fetch-and-delete-method (coll/get-coll coll)
+  (-> (fetch-and-delete-method (coll/get-collection coll)
                                (convert/clj->doc query))
       (convert/doc->clj)))
 
@@ -498,13 +490,13 @@
    ```"
   {:arglists '([collection & pipeline])}
   [coll & pipeline]
-  (-> (aggregate-method (coll/get-coll coll)
+  (-> (aggregate-method (coll/get-collection coll)
                         (convert/clj->doc pipeline))
       (convert/it->clj)))
 
 ; TODO: test
 (defn list-indexes [coll]
-  (-> (.listIndexes (coll/get-coll coll))
+  (-> (.listIndexes (coll/get-collection coll))
       (convert/it->clj)))
 
 (defn create-index!
@@ -531,14 +523,14 @@
    ```"
   {:arglists '([<collection> <keys> & :background <boolean> :name <string> :partial-filter-expression {} :sparse <boolean> :unique <boolean>])}
   [coll keys & options]
-  (create-index-method (coll/get-coll coll)
+  (create-index-method (coll/get-collection coll)
                        (if (map? keys)
                          (convert/clj->doc keys)
                          (convert/list->doc keys))
                        options))
 
 (defn drop-index! [coll index]
-  (drop-index-method (coll/get-coll coll)
+  (drop-index-method (coll/get-collection coll)
                      index))
 
 (defn get-collections []
@@ -549,13 +541,29 @@
 (defn create-collection!
   "Create collection.
    
-   | Parameter                    | Description |
-   | ---                          | --- |
-   | 'name`       | `keyword/string` Collection name. |
-   | `:collation` | `optional collation object` The collation of the collection. |"
-  {:arglists '([<name> & :collation <collation object>])}
+   | Parameter     | Description |
+   | ---           | --- |
+   | 'name`        | `keyword/string` Collection name. |
+   | `:collation`  | `optional collation object` The collation of the collection. |
+   | `:schema`     | `optional map` The schema validation map. |
+   | `:validation` | `optional map` Validation logic outside of the schema. |
+   | `:level`      | `optional enum` Validaton level: |
+   |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents. |
+   |               | `:off` No validation for inserts or updates. |
+   |               | `:strict` Apply validation rules to all inserts and all updates. Default value. |
+   
+   **Returns**
+   
+   The collection object
+   
+   **Examples**
+   
+   ```Clojure
+   (create-collection!)
+   ```"
+  {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [name & options]
-  (create-coll-method name options))
+  (create-collection-method name options))
 
 (defn drop-collection! [coll]
-  (drop-coll-method (coll/get-coll coll)))
+  (drop-collection-method (coll/get-collection coll)))

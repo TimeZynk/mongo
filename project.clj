@@ -1,4 +1,4 @@
-(defproject com.timezynk/mongo "0.5.11"
+(defproject com.timezynk/mongo "0.5.15"
   :description "Clojure wrapper for com.mongodb.client Java API."
   :url "https://github.com/TimeZynk/mongo"
   :license {:name "MIT"
@@ -13,7 +13,6 @@
                  [org.clojure/clojure "1.10.3"]
                  [org.clojure/core.async "1.3.618"]
                  [org.clojure/tools.logging "1.2.4"]
-            ;;      [org.mongodb/mongodb-driver-sync "4.6.0"]
                  [org.mongodb/mongo-java-driver "3.12.10"]]
   :repl-options {:init-ns com.timezynk.mongo}
   :test-paths ["src" "test"]
