@@ -3,9 +3,9 @@
    [com.mongodb.client.model
     Collation CollationAlternate CollationCaseFirst CollationMaxVariable CollationStrength]))
 
-(defn collation-method [{:keys [alternate backwards case-level case-first locale
-                                max-variable normalization numeric-ordering strength]}]
-  (cond-> (Collation/builder)
+(defn- with-options [result {:keys [alternate backwards case-level case-first
+                                    max-variable normalization numeric-ordering strength]}]
+  (cond-> result
     alternate        (.collationAlternate (case alternate
                                             :non-ignorable CollationAlternate/NON_IGNORABLE
                                             :shifted       CollationAlternate/SHIFTED))
@@ -15,7 +15,6 @@
                                             :off   CollationCaseFirst/OFF
                                             :upper CollationCaseFirst/UPPER))
     case-level       (.caseLevel case-level)
-    locale           (.locale locale)
     max-variable     (.collationMaxVariable (case max-variable
                                               :punct CollationMaxVariable/PUNCT
                                               :space CollationMaxVariable/SPACE))
@@ -27,3 +26,9 @@
                                            :quaternary CollationStrength/QUATERNARY
                                            :secondary  CollationStrength/SECONDARY
                                            :tertiary   CollationStrength/TERTIARY))))
+
+(defn collation-method [locale options]
+  (-> (Collation/builder)
+      (.locale locale)
+      (with-options options)
+      (.build)))
