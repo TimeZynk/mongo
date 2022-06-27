@@ -26,5 +26,5 @@
     (is (= "1" (:name (mongo/fetch-one :users)))))
   (testing "Cleanup"
     (mongo/with-database "test-2"
-      (doseq [coll (mongo/list-collections)]
+      (doseq [coll (mongo/list-collection-names)]
         (mongo/drop-collection! coll)))))

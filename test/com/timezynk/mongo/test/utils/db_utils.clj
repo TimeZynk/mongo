@@ -17,5 +17,5 @@
       (clear-db))))
 
 (defn test-suite-db-fixture [f]
-  (mongo/with-mongo "mongodb://127.0.0.1:27017" "test"
+  (mongo/with-mongo "mongodb://127.0.0.1:27017/test"
     (f)))

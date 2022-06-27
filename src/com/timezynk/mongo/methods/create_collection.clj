@@ -1,7 +1,8 @@
 (ns ^:no-doc com.timezynk.mongo.methods.create-collection
   (:require
    [com.timezynk.mongo.utils.convert :as convert]
-   [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]])
+   [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]]
+   [com.timezynk.mongo.schema :refer [convert-schema]])
   (:import
    [com.mongodb.client.model CreateCollectionOptions ValidationLevel ValidationOptions]))
 
@@ -11,7 +12,7 @@
     (or schema validation) (.validationOptions
                             (-> (ValidationOptions.)
                                 (.validator (convert/clj->doc (merge (when schema
-                                                                       {:$jsonSchema schema})
+                                                                       (convert-schema schema))
                                                                      (when validation
                                                                        validation))))
                                 (.validationLevel (case (or level :strict)

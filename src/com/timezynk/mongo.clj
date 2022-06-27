@@ -17,14 +17,15 @@
    [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method]]
    [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method]]
    [com.timezynk.mongo.methods.fetch-and-update :refer [fetch-and-update-method]]
+   [com.timezynk.mongo.methods.insert :refer [insert-method insert-options]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
-   [com.timezynk.mongo.methods.insert :refer [insert-method]]
+   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection]]
    [com.timezynk.mongo.methods.replace :refer [replace-method]]
    [com.timezynk.mongo.methods.update :refer [update-method update-one-method]]
    [com.timezynk.mongo.utils.collection :as coll]
    [com.timezynk.mongo.utils.convert :as convert])
-  (:import [com.mongodb MongoClientSettings]
+  (:import [com.mongodb ConnectionString MongoClientSettings]
            [com.mongodb.client ClientSession MongoClients TransactionBody]
            [com.mongodb.client.model Collation]))
 
@@ -69,9 +70,8 @@
    
    | Parameter    | Description |
    | ---          | --- |
-   | `uri`        | `string` Database location. |
+   | `uri`        | `string` Connection string. See the [API documentation](http://mongodb.github.io/mongo-java-driver/4.5/apidocs/mongodb-driver-core/com/mongodb/ConnectionString.html) for more details. |
    | `connection` | A connection object. |
-   | `database`   | `string` Database to use. |
    | `body`       | Encapsulated program utilizing the connection. |
    
    **Returns**
@@ -81,19 +81,17 @@
    **Examples**
 
    ```Clojure
-   (with-mongo \"mongodb://localhost:27017\" \"my-database\"
+   (with-mongo \"mongodb://localhost:27017/my-database\" 
      (insert! :users {:name \"My Name\"})
      (fetch! :users))
    ```"
-  {:arglists '([<uri> <database> & <body>]
-               [<connection> <database> & <body>])}
-  [conn ^String db & body]
-  `(let [client# (-> (if (= (type ~conn) String)
-                       (connection ~conn)
-                       ~conn)
-                     (MongoClients/create))]
+  {:arglists '([<uri> & <body>]
+               [<connection> & <body>])}
+  [conn & body]
+  `(let [conn#   (ConnectionString. ~conn)
+         client# (MongoClients/create conn#)]
      (binding [*mongo-client*   client#
-               *mongo-database* (.getDatabase client# ~db)]
+               *mongo-database* (.getDatabase client# (.getDatabase conn#))]
        (try
          ~@body
          (finally
@@ -227,27 +225,55 @@
    | `:schema`     | `optional map` The schema validation map. |
    | `:validation` | `optional map` Validation logic outside of the schema. |
    | `:level`      | `optional enum` Validaton level: |
+   |               | `:strict` Apply validation rules to all inserts and all updates. Default value. |
    |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents. |
    |               | `:off` No validation for inserts or updates. |
-   |               | `:strict` Apply validation rules to all inserts and all updates. Default value. |
    
    **Returns**
    
-   The collection object
+   The collection object.
    
    **Examples**
    
    ```Clojure
-   (create-collection!)
+   ; Collection with exactly one required field `name` of type `string`:
+   (create-collection! :users :schema {:name (string)})
+
+   ; Collection where each document can have either a `name` field or an `address` field, but not both:
+   (create-collection! :users :validation {:$or [{:name {:$exists 1} :address {:$exists 0}}
+                                                 {:name {:$exists 0} :address {:$exists 1}}]})
    ```"
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
   (create-collection-method (name coll) options))
 
 (defn modify-collection!
-  "Make updates to a collection"
-  {:arglists '([& :name <string> :collation <collation object> :level <integer> :schema {} :validation {}])}
-  [& options])
+  "Make updates to a collection.
+   
+   | Parameter     | Description |
+   | ---           | --- |
+   | `name`        | `keyword/string` Collection name. |
+   | `:name`       | `optional keyword/string` New name. |
+   | `:collation`  | `optional collation object` New collation. |
+   | `:schema`     | `optional map` New schema. |
+   | `:validation` | `optional map` New validation. |
+   | `:level`      | `optional enum` New validaton level: |
+   |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents. |
+   |               | `:off` No validation for inserts or updates. |
+   |               | `:strict` Apply validation rules to all inserts and all updates. Default value. |
+   
+   **Returns**
+   
+   The collection object.
+   
+   **Examples**
+   
+   ```Clojure
+   (modify-collection!)
+   ```"
+  {:arglists '([<collection> & :name <string> :collation <collation object> :level <integer> :schema {} :validation {}])}
+  [coll & options]
+  (modify-collection (coll/get-collection coll) options))
 
 (defn drop-collection! [coll]
   (drop-collection-method (coll/get-collection coll)))
@@ -369,12 +395,19 @@
 (defn insert!
   "Insert one document or a list thereof in a collection. Inserting a list is atomic.
    
-   | Parameter       | Description |
-   | ---             | --- |
-   | `collection`    | `keyword/string` The collection. |
-   | `document`      | `map` A document. |
-   | `document-list` | `list(map)` A list of documents. |
-   
+   | Parameter        | Description |
+   | ---              | --- |
+   | `collection`     | `keyword/string` The collection. |
+   | `document`       | `map` A document. |
+   | `document-list`  | `list(map)` A list of documents. |
+   | `:write-concern` | `optional enum` Set write concern: |
+   |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default. |
+   |                  | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. |
+   |                  | `:unacknowledged` Write operations that use this write concern will return as soon as the message is written to the socket. |
+   |                  | `:w1` Write operations that use this write concern will wait for acknowledgement from a single member. |
+   |                  | `:w2` Write operations that use this write concern will wait for acknowledgement from two members. |
+   |                  | `:w3` Write operations that use this write concern will wait for acknowledgement from three members. |
+
    **Returns**
 
    The document/s with `_id` fields, either a single document or a lazy sequence.
@@ -386,10 +419,13 @@
 
    (insert! :users [{:name \"Alice\"} {:name \"Bob\"}])
    ```"
-  {:arglists '([<collection> <document>] [<collection> <document-list>])}
-  [coll doc]
+  {:arglists '([<collection> <document> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]]
+               [<collection> <document-list> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
+  [coll doc & options]
   (let [doc (convert/clj->doc doc)]
-    (insert-method (coll/get-collection coll) doc)
+    (-> (coll/get-collection coll)
+        (insert-options options)
+        (insert-method doc))
     (convert/doc->clj doc)))
 
 ; ------------------------
