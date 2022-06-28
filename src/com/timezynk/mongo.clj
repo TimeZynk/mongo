@@ -39,7 +39,7 @@
    | Parameter        | Description |
    | ---              | --- |
    | `uri`            | `string` Database location. |
-   | `:retry-writes`  | `optional boolean` Sets whether writes should be retried if they fail due to a network error. Default is `false`. |
+   | `:retry-writes?` | `optional boolean` Sets whether writes should be retried if they fail due to a network error. Default is `false`. |
    | `:write-concern` | `optional enum` Set write concern: |
    |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default. |
    |                  | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. |
@@ -61,7 +61,7 @@
    ; Create a custom connection
    (connection \"mongodb://localhost:27017\" :retry-writes true :write-concern :w2)
    ```"
-  {:arglists '([<uri> & :retry-writes <boolean> :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
+  {:arglists '([<uri> & :retry-writes? <boolean> :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
   ^MongoClientSettings [^String uri & options]
   (connection-method uri options))
 
@@ -146,29 +146,29 @@
 (defn collation
   "Create collation.
    
-   | Parameter           | Description |
-   | ---                 | --- |
-   | `locale`            | `string` The two-letter ICU locale string. |
-   | `:alternate`        | `optional enum` Should whitespace and punctuation be considered as base characters for purposes of comparison? |
-   |                     | `:non-ignorable` Whitespace and punctuation are considered base characters. |
-   |                     | `:shifted` Whitespace and punctuation are not considered base characters and are only distinguished at strength levels greater than 3. |
-   | `:backwards`        | `optional boolean` Whether strings with diacritics sort from back of the string, such as with some French dictionary ordering. Default is `false`. |
-   | `:case-first`       | `optional enum` Sort order of case differences during tertiary level comparisons. |
-   |                     | `:lower` Uppercase sorts before lowercase. |
-   |                     | `:upper` Lowercase sorts before uppercase. |
-   |                     | `:off` Default value. Similar to `:lower` with slight differences. |
-   | `:case-level`       | `optional boolean` Flag that determines whether to include case comparison at strength level 1 or 2. |
-   | `:max-variable`     | `optional enum` Which characters are considered ignorable when `:alternate = :shifted`? Has no effect if `:alternate = :non-ignorable`. |
-   |                     | `:punct` Both whitespace and punctuation are ignorable and not considered base characters. |
-   |                     | `:space` Whitespace is ignorable and not considered to be base characters. |
-   | `:normalization`    | `optional boolean` Check if text requires normalization and to perform normalization. Default is `false`. |
-   | `:numeric-ordering` | `optional boolean` Compare numeric strings as numbers or as strings. Default is `false`. |
-   | `:strength`         | `optional enum` The level of comparison to perform. |
-   |                     | `:identical` Limited for specific use case of tie breaker. |
-   |                     | `:primary` Collation performs comparisons of the base characters only, ignoring other differences such as diacritics and case. |
-   |                     | `:secondary` Collation performs comparisons up to secondary differences, such as diacritics. That is, collation performs comparisons of base characters (primary differences) and diacritics (secondary differences). Differences between base characters takes precedence over secondary differences. |
-   |                     | `:tertiary` Collation performs comparisons up to tertiary differences, such as case and letter variants. That is, collation performs comparisons of base characters (primary differences), diacritics (secondary differences), and case and variants (tertiary differences). Differences between base characters takes precedence over secondary differences, which takes precedence over tertiary differences. Default level. |
-   |                     | `:quaternary` Limited for specific use case to consider punctuation when levels 1-3 ignore punctuation or for processing Japanese text. |
+   | Parameter            | Description |
+   | ---                  | --- |
+   | `locale`             | `string` The two-letter ICU locale string. |
+   | `:alternate`         | `optional enum` Should whitespace and punctuation be considered as base characters for purposes of comparison? |
+   |                      | `:non-ignorable` Whitespace and punctuation are considered base characters. |
+   |                      | `:shifted` Whitespace and punctuation are not considered base characters and are only distinguished at strength levels greater than 3. |
+   | `:backwards?`        | `optional boolean` Whether strings with diacritics sort from back of the string, such as with some French dictionary ordering. Default is `false`. |
+   | `:case-first`        | `optional enum` Sort order of case differences during tertiary level comparisons. |
+   |                      | `:lower` Uppercase sorts before lowercase. |
+   |                      | `:upper` Lowercase sorts before uppercase. |
+   |                      | `:off` Default value. Similar to `:lower` with slight differences. |
+   | `:case-level?`       | `optional boolean` Flag that determines whether to include case comparison at strength level 1 or 2. |
+   | `:max-variable`      | `optional enum` Which characters are considered ignorable when `:alternate = :shifted`? Has no effect if `:alternate = :non-ignorable`. |
+   |                      | `:punct` Both whitespace and punctuation are ignorable and not considered base characters. |
+   |                      | `:space` Whitespace is ignorable and not considered to be base characters. |
+   | `:normalization?`    | `optional boolean` Check if text requires normalization and to perform normalization. Default is `false`. |
+   | `:numeric-ordering?` | `optional boolean` Compare numeric strings as numbers or as strings. Default is `false`. |
+   | `:strength`          | `optional enum` The level of comparison to perform. |
+   |                      | `:identical` Limited for specific use case of tie breaker. |
+   |                      | `:primary` Collation performs comparisons of the base characters only, ignoring other differences such as diacritics and case. |
+   |                      | `:secondary` Collation performs comparisons up to secondary differences, such as diacritics. That is, collation performs comparisons of base characters (primary differences) and diacritics (secondary differences). Differences between base characters takes precedence over secondary differences. |
+   |                      | `:tertiary` Collation performs comparisons up to tertiary differences, such as case and letter variants. That is, collation performs comparisons of base characters (primary differences), diacritics (secondary differences), and case and variants (tertiary differences). Differences between base characters takes precedence over secondary differences, which takes precedence over tertiary differences. Default level. |
+   |                      | `:quaternary` Limited for specific use case to consider punctuation when levels 1-3 ignore punctuation or for processing Japanese text. |
 
    For more details, see the [manual page on collation](https://www.mongodb.com/docs/v5.3/reference/collation/).
 
@@ -181,8 +181,8 @@
    ```Clojure
    (collation)
    ```"
-  {:arglists '([<locale> & :alternate [:non-ignorable :shifted] :backwards <boolean> :case-first [:lower :off :upper]
-                :case-level <boolean> :max-variable [:punct :space] :normalization <boolean> :numeric-ordering <boolean>
+  {:arglists '([<locale> & :alternate [:non-ignorable :shifted] :backwards? <boolean> :case-first [:lower :off :upper]
+                :case-level? <boolean> :max-variable [:punct :space] :normalization? <boolean> :numeric-ordering? <boolean>
                 :strength [:identical :primary :quaternary :secondary :tertiary]])}
   ^Collation [locale & options]
   (collation-method locale options))
@@ -294,11 +294,11 @@
    | ---                          | --- |
    | `collection`                 | `keyword/string` Collection name. |
    | `keys`                       | `map/list(keyword/string)` A document or a list of keywords or strings. |
-   | `:background`                | `optional boolean` Create the index in the background. Default `false`. |
+   | `:background?`               | `optional boolean` Create the index in the background. Default `false`. |
    | `:name`                      | `optional string` A custom name for the index. |
    | `:partial-filter-expression` | `optional map` A filter expression for the index. |
-   | `:sparse`                    | `optional boolean` Allow null values. Default `false`. |
-   | `:unique`                    | `optional boolean` Index values must be unique. Default `false`. |
+   | `:sparse?`                   | `optional boolean` Allow null values. Default `false`. |
+   | `:unique?`                   | `optional boolean` Index values must be unique. Default `false`. |
    
    **Returns**
    
@@ -309,7 +309,7 @@
    ```Clojure
    (create-index!)
    ```"
-  {:arglists '([<collection> <keys> & :background <boolean> :name <string> :partial-filter-expression {} :sparse <boolean> :unique <boolean>])}
+  {:arglists '([<collection> <keys> & :background? <boolean> :name <string> :partial-filter-expression {} :sparse? <boolean> :unique? <boolean>])}
   [coll keys & options]
   (create-index-method (coll/get-collection coll)
                        (if (map? keys)
