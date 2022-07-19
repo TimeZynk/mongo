@@ -1,4 +1,5 @@
 (ns com.timezynk.mongo
+  "A functional Clojure wrapper for the modern Java MongoDB API."
   ^{:doc "A wrapper for the com.mongodb.client Java API.
           
           Requires MongoDB version 4.4 or later."}
@@ -25,15 +26,15 @@
    [com.timezynk.mongo.methods.update :refer [update-method update-one-method]]
    [com.timezynk.mongo.utils.collection :as coll]
    [com.timezynk.mongo.utils.convert :as convert])
-  (:import [com.mongodb ConnectionString MongoClientSettings]
-           [com.mongodb.client ClientSession MongoClients TransactionBody]
+  (:import [com.mongodb MongoClientSettings]
+           [com.mongodb.client ClientSession TransactionBody]
            [com.mongodb.client.model Collation]))
 
 ; ------------------------
 ; Connection
 ; ------------------------
 
-(defn connection
+(defn create-connection!
   "Create a connection object.
    
    | Parameter        | Description |
@@ -65,6 +66,10 @@
   ^MongoClientSettings [^String uri & options]
   (connection-method uri options))
 
+(defn close-connection!
+  [conn]
+  (.close (:client conn)))
+
 (defmacro with-mongo
   "Functionally set up or change mongodb connection. Reverts to earlier settings when leaving scope.
    
@@ -88,18 +93,17 @@
   {:arglists '([<uri> & <body>]
                [<connection> & <body>])}
   [conn & body]
-  `(let [conn#   (ConnectionString. ~conn)
-         client# (MongoClients/create conn#)]
-     (binding [*mongo-client*   client#
-               *mongo-database* (.getDatabase client# (.getDatabase conn#))]
+  `(let [conn#   ~conn
+         client# (if (= (type conn#) String)
+                   (connection-method conn#)
+                   conn#)]
+     (binding [*mongo-client*   (:client client#)
+               *mongo-database* (:database client#)]
        (try
          ~@body
          (finally
-           (.close *mongo-client*))))))
-
-(defn wrap-mongo [conn db]
-  (fn [f]
-    (with-mongo conn db f)))
+           (when (= (type conn#) String)
+             (.close *mongo-client*)))))))
 
 ; ------------------------
 ; Database
@@ -254,13 +258,6 @@
    | ---           | --- |
    | `name`        | `keyword/string` Collection name. |
    | `:name`       | `optional keyword/string` New name. |
-   | `:collation`  | `optional collation object` New collation. |
-   | `:schema`     | `optional map` New schema. |
-   | `:validation` | `optional map` New validation. |
-   | `:level`      | `optional enum` New validaton level: |
-   |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents. |
-   |               | `:off` No validation for inserts or updates. |
-   |               | `:strict` Apply validation rules to all inserts and all updates. Default value. |
    
    **Returns**
    
@@ -269,9 +266,9 @@
    **Examples**
    
    ```Clojure
-   (modify-collection!)
+   (modify-collection! :coll :name :coll-2)
    ```"
-  {:arglists '([<collection> & :name <string> :collation <collation object> :level <integer> :schema {} :validation {}])}
+  {:arglists '([<name> & :name <string>])}
   [coll & options]
   (modify-collection (coll/get-collection coll) options))
 

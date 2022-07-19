@@ -52,16 +52,26 @@
                           (mongo/insert! :users {:id "A"})))))
 
 (deftest string-schema
-  (mongo/create-collection! :users :schema {:string (s/string)})
+  (mongo/create-collection! :coll-1 :schema {:field (s/string :regex "[A-Z]")})
+  (mongo/create-collection! :coll-2 :schema {:field (s/string :in ["A"])})
   (testing "Insert string"
     (try
-      (mongo/insert! :users {:string "S"})
+      (mongo/insert! :coll-1 {:field "S"})
+      (mongo/insert! :coll-2 {:field "A"})
       (catch Exception _e
         (is false))))
   (testing "Insert not string"
     (is (thrown-with-msg? Exception
                           #"Document failed validation"
-                          (mongo/insert! :users {:string 1})))))
+                          (mongo/insert! :coll-1 {:field 1}))))
+  (testing "Fail regex"
+    (is (thrown-with-msg? Exception
+                          #"Document failed validation"
+                          (mongo/insert! :coll-1 {:field "s"}))))
+  (testing "Fail enum"
+    (is (thrown-with-msg? Exception
+                          #"Document failed validation"
+                          (mongo/insert! :coll-2 {:field "B"})))))
 
 (deftest number-schema
   (mongo/create-collection! :users :schema {:number (s/number)})

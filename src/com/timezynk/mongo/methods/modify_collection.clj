@@ -1,23 +1,15 @@
 (ns ^:no-doc com.timezynk.mongo.methods.modify-collection
   (:require
-   [com.timezynk.mongo.utils.convert :as convert]
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]])
-  (:import
-   [com.mongodb MongoNamespace]
-   [com.mongodb.client.model CreateCollectionOptions ValidationLevel ValidationOptions]))
+  (:import [com.mongodb MongoNamespace]))
 
-(defn modify-collection [coll {:keys [name collation level schema validation]}]
+(defn- rename-collection [coll name]
+  (if *mongo-session*
+    (.renameCollection coll *mongo-session* (MongoNamespace. (.getName *mongo-database*)
+                                                             (clojure.core/name name)))
+    (.renameCollection coll (MongoNamespace. (.getName *mongo-database*)
+                                             (clojure.core/name name)))))
+
+(defn modify-collection [coll {:keys [name]}]
   (cond-> coll
-    name   (.renameCollection (MongoNamespace. (.getName *mongo-database*)
-                                               (name name)))
-    collation (.collation collation)
-    (or schema validation) (.validationOptions
-                            (-> (ValidationOptions.)
-                                (.validator (convert/clj->doc (merge (when schema
-                                                                       {:$jsonSchema schema})
-                                                                     (when validation
-                                                                       validation))))
-                                (.validationLevel (case (or level :strict)
-                                                    :moderate ValidationLevel/MODERATE
-                                                    :off      ValidationLevel/OFF
-                                                    :strict   ValidationLevel/STRICT))))))
+    name (rename-collection name)))
