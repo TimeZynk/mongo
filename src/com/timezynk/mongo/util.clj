@@ -59,9 +59,3 @@
      (binding [*mongo-client*   (:client client#)
                *mongo-database* (:database client#)]
        ~@body)))
-
-; ------------------------
-; ObjectId
-; ------------------------
-
-

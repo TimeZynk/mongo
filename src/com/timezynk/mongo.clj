@@ -95,7 +95,7 @@
   [conn & body]
   `(let [conn#   ~conn
          client# (if (= (type conn#) String)
-                   (connection-method conn#)
+                   (connection-method conn# [])
                    conn#)]
      (binding [*mongo-client*   (:client client#)
                *mongo-database* (:database client#)]
