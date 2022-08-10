@@ -1,32 +1,54 @@
 (ns com.timezynk.mongo.test.watch
   (:require
-   [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing use-fixtures]]
-   [clojure.tools.logging :as log]
    [com.timezynk.mongo :as mongo]
    [com.timezynk.mongo.watch :as w]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu]))
+   [com.timezynk.mongo.test.utils.db-utils :as dbu])
+  (:import [java.util Date]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
-(defn on-insert [time param]
-  (log/spy "1111111111111")
-  (log/spy time)
-  (log/spy param))
+(deftest test-insert
+  (testing "Listen for inserts, ignore the update"
+   (let [times (atom [])
+         res (atom [])
+         on-insert (fn [time doc]
+                     (reset! times (concat @times [time]))
+                     (reset! res (concat @res [doc])))
+         _ (mongo/create-collection! :coll)
+         _ (w/on-insert :coll on-insert)
+         id-1 (:_id (mongo/insert! :coll {:name "Name1"}))
+         id-2 (:_id (mongo/insert! :coll {:name "Name2"}))]
+     (mongo/update-one! :coll {:name "Name1"} {:$set {:name "Name3"}})
+     (Thread/sleep 1000)
+     (is (= [Date Date] (map type @times)))
+     (is (= [{:_id id-1 :name "Name1"}
+             {:_id id-2 :name "Name2"}]
+            @res)))))
 
-(deftest list-coll
-  (is true)
-  (mongo/create-collection! :coll)
-  (let [chan (w/insert :coll on-insert)]
-    (mongo/insert! :coll {:name "Name1"})
-    (mongo/insert! :coll {:name "Name2"})
-    (Thread/sleep 1000)
-    (log/spy "2222222222222")
-    #_(log/spy (async/<!! chan))))
+(deftest test-update
+  (testing "Listen for update, ignore the insert"
+    (let [res (atom [])
+          on-update (fn [_ doc]
+                      (reset! res (concat @res [doc])))
+          _ (mongo/create-collection! :coll)
+          _ (w/on-update :coll on-update)
+          id (:_id (mongo/insert! :coll {:name "Name1"}))]
+      (mongo/update-one! :coll {:name "Name1"} {:$set {:name "Name3"}})
+      (Thread/sleep 1000)
+      (is (= [{:_id id :name "Name3"}]
+             @res)))))
 
-(deftest test-2
-  (is true)
-  (let [n (let [i (iterate inc 0)]
-            (fn [] (next i)))]
-    (log/spy n)))
+(deftest test-delete
+  (testing "Listen for delete, ignore the insert"
+    (let [res (atom [])
+          on-delete (fn [_ doc]
+                      (reset! res (concat @res [doc])))
+          _ (mongo/create-collection! :coll)
+          _ (w/on-delete :coll on-delete)
+          id (:_id (mongo/insert! :coll {:name "Name1"}))]
+      (mongo/delete-one! :coll {:name "Name1"})
+      (Thread/sleep 1000)
+      (is (= [{:_id id}]
+             @res)))))
