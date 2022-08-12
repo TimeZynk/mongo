@@ -1,7 +1,7 @@
 (ns ^:no-doc com.timezynk.mongo.utils.convert
   (:require
    [clojure.core.reducers :as r])
-  (:import [org.bson Document]))
+  (:import [org.bson BsonValue Document]))
 
 (defn clj->doc
   "Convert a map or list of maps to BSON document."
@@ -28,6 +28,8 @@
                   [(keyword (.getKey x))
                    (doc->clj (.getValue x))]))
          (into {}))
+    (instance? BsonValue v)
+    (.getValue v)
     :else v))
 
 (defn list->doc

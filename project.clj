@@ -1,4 +1,4 @@
-(defproject com.timezynk/mongo "0.5.15"
+(defproject com.timezynk/mongo "0.6.7"
   :description "Clojure wrapper for com.mongodb.client Java API."
   :url "https://github.com/TimeZynk/mongo"
   :license {:name "MIT"
@@ -19,5 +19,4 @@
   :plugins [[lein-cljfmt "0.6.7"]]
   :profiles {:kaocha {:dependencies [[lambdaisland/kaocha "1.0.632"]]
                       :jvm-opts ["-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2"]}}
-
   :aliases {"kaocha" ["with-profile" "+kaocha" "run" "-m" "kaocha.runner"]})

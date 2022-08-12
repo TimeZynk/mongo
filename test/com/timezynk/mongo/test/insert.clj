@@ -53,36 +53,3 @@
     (.countDown latch-2)
     (is true? (.await latch-3 5 (TimeUnit/SECONDS)))
     (is (= 2 (count (mongo/fetch :companies {}))))))
-
-(defn write-thread-2 [latch-1 latch-2 latch-3]
-  (.countDown latch-1)
-  (is true? (.await latch-2 5 (TimeUnit/SECONDS)))
-  (mongo/insert! :companies {:duplicity 3})
-  (.countDown latch-3))
-
-(deftest transaction-fetch-1
-  (testing "Fetching from inside a transaction with consecutive reads"
-    (let [latch-1 (CountDownLatch. 1)
-          latch-2 (CountDownLatch. 1)
-          latch-3 (CountDownLatch. 1)]
-      (async/thread
-        (write-thread-2 latch-1 latch-2 latch-3))
-      (is true? (.await latch-1 5 (TimeUnit/SECONDS)))
-      (mongo/transaction
-       (is (= 0 (count (mongo/fetch :companies {}))))
-       (.countDown latch-2)
-       (is true? (.await latch-3 5 (TimeUnit/SECONDS)))
-       (is (= 0 (count (mongo/fetch :companies {}))))))))
-
-(deftest transaction-fetch-2
-  (testing "Fetching from inside a transaction but with single read"
-    (let [latch-1 (CountDownLatch. 1)
-          latch-2 (CountDownLatch. 1)
-          latch-3 (CountDownLatch. 1)]
-      (async/thread
-        (write-thread-2 latch-1 latch-2 latch-3))
-      (is true? (.await latch-1 5 (TimeUnit/SECONDS)))
-      (mongo/transaction
-       (.countDown latch-2)
-       (is true? (.await latch-3 5 (TimeUnit/SECONDS)))
-       (is (= 1 (count (mongo/fetch :companies {}))))))))

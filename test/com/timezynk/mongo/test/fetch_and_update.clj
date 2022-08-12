@@ -10,16 +10,16 @@
 
 (deftest update-and-fetch-old
   (mongo/insert! :companies {:name "1"})
-  (is (= "1" (:name (mongo/fetch-and-update! :companies {} {:$set {:name "2"}}))))
+  (is (= "1" (:name (mongo/fetch-and-update-one! :companies {} {:$set {:name "2"}}))))
   (is (= "2" (:name (mongo/fetch-one :companies {})))))
 
 (deftest update-and-fetch-new
   (mongo/insert! :companies {:name "1"})
-  (is (= "2" (:name (mongo/fetch-and-update! :companies {} {:$set {:name "2"}} :return-new? true)))))
+  (is (= "2" (:name (mongo/fetch-and-update-one! :companies {} {:$set {:name "2"}} :return-new? true)))))
 
 (deftest upsert-and-fetch-old
-  (is (nil? (:name (mongo/fetch-and-update! :companies {} {:$set {:name "2"}} :upsert? true))))
+  (is (nil? (:name (mongo/fetch-and-update-one! :companies {} {:$set {:name "2"}} :upsert? true))))
   (is (= "2" (:name (mongo/fetch-one :companies {})))))
 
 (deftest upsert-and-fetch-new
-  (is (= "2" (:name (mongo/fetch-and-update! :companies {} {:$set {:name "2"}} :upsert? true :return-new? true)))))
+  (is (= "2" (:name (mongo/fetch-and-update-one! :companies {} {:$set {:name "2"}} :upsert? true :return-new? true)))))

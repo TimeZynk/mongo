@@ -6,14 +6,14 @@
   (:import [com.mongodb.client.model IndexOptions]))
 
 (defn- create-options ^IndexOptions
-  [{:keys [background name partial-filter-expression sparse unique]}]
+  [{:keys [background? name partial-filter-expression sparse? unique?]}]
   (cond-> (IndexOptions.)
-    background                (.background background)
+    background?               (.background background?)
     name                      (.name name)
     partial-filter-expression (.partialFilterExpression
                                (convert/clj->doc partial-filter-expression))
-    sparse                    (.sparse sparse)
-    unique                    (.unique unique)))
+    sparse?                   (.sparse sparse?)
+    unique?                   (.unique unique?)))
 
 (defmulti create-index-method
   (fn [_coll _keys _options]
