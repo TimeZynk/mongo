@@ -244,8 +244,8 @@
    (create-collection! :users :schema {:name (string)})
 
    ; Collection where each document can have either a `name` field or an `address` field, but not both:
-   (create-collection! :users :validation {:$or [{:name {:$exists 1} :address {:$exists 0}}
-                                                 {:name {:$exists 0} :address {:$exists 1}}]})
+   (create-collection! :users :validation {:$or [{:name {:$ne nil} :address {:$exists 0}}
+                                                 {:name {:$exists 0} :address {:$ne nil}}]})
    ```"
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]

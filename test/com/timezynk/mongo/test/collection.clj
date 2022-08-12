@@ -1,37 +1,36 @@
 (ns com.timezynk.mongo.test.collection
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
-  ;;  [clojure.tools.logging :as log]
-   [com.timezynk.mongo :as mongo]
+   [com.timezynk.mongo :as m]
    [com.timezynk.mongo.test.utils.db-utils :as dbu]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
 (deftest list-coll
-  (mongo/create-collection! :coll)
-  (is (= [:coll] (mongo/list-collection-names))))
+  (m/create-collection! :coll)
+  (is (= [:coll] (m/list-collection-names))))
 
 (deftest set-collation
   (testing "Ignore whitespace and punctuation in search"
-    (mongo/create-collection! :coll :collation (mongo/collation "se" :alternate :shifted))
-    (mongo/insert! :coll {:name "12"})
-    (is (= 1 (mongo/fetch-count :coll {:name ".12 "})))))
+    (m/create-collection! :coll :collation (m/collation "se" :alternate :shifted))
+    (m/insert! :coll {:name "12"})
+    (is (= 1 (m/fetch-count :coll {:name ".12 "})))))
 
 (deftest collection-info
-  (mongo/create-collection! :coll :collation (mongo/collation "se" :alternate :shifted))
+  (m/create-collection! :coll :collation (m/collation "se" :alternate :shifted))
   (is (= "shifted"
-         (get-in (mongo/collection-info :coll)
+         (get-in (m/collection-info :coll)
                  [:options :collation :alternate]))))
 
 (deftest change-name
-  (mongo/insert! :coll {:name "A"})
-  (mongo/modify-collection! :coll :name :coll-2)
-  (is (nil? (mongo/fetch-one :coll)))
-  (is (= "A" (:name (mongo/fetch-one :coll-2)))))
+  (m/insert! :coll {:name "A"})
+  (m/modify-collection! :coll :name :coll-2)
+  (is (nil? (m/fetch-one :coll)))
+  (is (= "A" (:name (m/fetch-one :coll-2)))))
 
 (deftest change-collation
-  (mongo/insert! :coll {:name "12"})
-  (is (= 0 (mongo/fetch-count :coll {:name ".12 "})))
-  (is (= 1 (-> (mongo/fetch :coll {:name ".12 "} :collation (mongo/collation "se" :alternate :shifted))
+  (m/insert! :coll {:name "12"})
+  (is (= 0 (m/fetch-count :coll {:name ".12 "})))
+  (is (= 1 (-> (m/fetch :coll {:name ".12 "} :collation (m/collation "se" :alternate :shifted))
                count))))

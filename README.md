@@ -1,6 +1,6 @@
 # TimeZynk/mongo [![Clojars Project](https://img.shields.io/clojars/v/com.timezynk/mongo.svg)](https://clojars.org/com.timezynk/mongo) 
 
-A Clojure wrapper for the [modern MongoDB Java driver](https://mongodb.github.io/mongo-java-driver/4.5/apidocs/mongodb-driver-sync/com/mongodb/client/package-summary.html). Loosely based on [somnium/congomongo](https://github.com/congomongo/congomongo).
+A Clojure wrapper for the [modern MongoDB Java driver](https://mongodb.github.io/mongo-java-driver/4.5/apidocs/mongodb-driver-sync/com/mongodb/client/package-summary.html).
 
 ## Testing
 
@@ -14,7 +14,7 @@ You need MongoDB version 4.4 or later installed.
 
        mongod --replSet rs0 --dbpath ./mongodb --port 27017
 
-1. In a new terminal window, start the replica set:
+1. In a new terminal window, create the replica set (this is only required once):
 
        mongo --eval "rs.initiate({ \"_id\": \"rs0\", members: [{ \"_id\": 0, host: \"localhost:27017\" }]}, { force: true })"
 

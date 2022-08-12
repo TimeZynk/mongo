@@ -1,12 +1,12 @@
 (ns com.timezynk.mongo.test.utils.db-utils
   (:require
    [clojure.tools.logging :as log]
-   [com.timezynk.mongo :as mongo]))
+   [com.timezynk.mongo :as m]))
 
 (defn clear-db []
   (try
-    (doseq [coll (mongo/list-collection-names)]
-      (mongo/drop-collection! coll))
+    (doseq [coll (m/list-collection-names)]
+      (m/drop-collection! coll))
     (catch Exception e
       (log/warn e "Failed to remove collections"))))
 
@@ -17,5 +17,5 @@
       (clear-db))))
 
 (defn test-suite-db-fixture [f]
-  (mongo/with-mongo "mongodb://127.0.0.1:27017/test"
+  (m/with-mongo "mongodb://127.0.0.1:27017/test"
     (f)))
