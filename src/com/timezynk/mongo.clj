@@ -279,7 +279,6 @@
 ; Index
 ; ------------------------
 
-; TODO: test
 (defn list-indexes [coll]
   (-> (.listIndexes (coll/get-collection coll))
       (convert/it->clj)))
@@ -287,15 +286,16 @@
 (defn create-index!
   "Create an index for a collection.
    
-   | Parameter                    | Description |
-   | ---                          | --- |
-   | `collection`                 | `keyword/string` Collection name. |
-   | `keys`                       | `map/list(keyword/string)` A document or a list of keywords or strings. |
-   | `:background?`               | `optional boolean` Create the index in the background. Default `false`. |
-   | `:name`                      | `optional string` A custom name for the index. |
-   | `:partial-filter-expression` | `optional map` A filter expression for the index. |
-   | `:sparse?`                   | `optional boolean` Allow null values. Default `false`. |
-   | `:unique?`                   | `optional boolean` Index values must be unique. Default `false`. |
+   | Parameter      | Description |
+   | ---            | --- |
+   | `collection`   | `keyword/string` Collection name. |
+   | `keys`         | `map/list(keyword/string)` A document or a list of keywords or strings. |
+   | `:collation`   | `optional collation object` Collation of index. |
+   | `:background?` | `optional boolean` Create the index in the background. Default `false`. |
+   | `:name`        | `optional string` A custom name for the index. |
+   | `:filter`      | `optional map` A partial-filter-expression for the index. |
+   | `:sparse?`     | `optional boolean` Don't index null values. Default `false`. |
+   | `:unique?`     | `optional boolean` Index values must be unique. Default `false`. |
    
    **Returns**
    
@@ -304,9 +304,16 @@
    **Examples**
    
    ```Clojure
-   (create-index!)
+   ; Index over field-1 in descending order, field-2 as hashed
+   (create-index! :coll {:field-1 -1 :field-2 \"hashed\"})
+
+   ; Shorthand for indexing over fields in ascending order
+   (create-index! :coll [:field-1 :field-2])
+
+   ; Only flagged documents are indexed and searchable
+   (create-index! :coll [:field-1] :filter {:flag-field true})
    ```"
-  {:arglists '([<collection> <keys> & :background? <boolean> :name <string> :partial-filter-expression {} :sparse? <boolean> :unique? <boolean>])}
+  {:arglists '([<collection> <keys> & :collation <collation object> :background? <boolean> :name <string> :filter {} :sparse? <boolean> :unique? <boolean>])}
   [coll keys & options]
   (create-index-method (coll/get-collection coll)
                        (if (map? keys)

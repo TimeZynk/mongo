@@ -78,9 +78,9 @@
     (async/thread
       (try
         (while (.hasNext cursor)
-          (let [event  ^ChangeStreamDocument (.next cursor)
-                time   (get-time event)
-                id     (get-id event)]
+          (let [event ^ChangeStreamDocument (.next cursor)
+                time  (get-time event)
+                id    (get-id event)]
             (delete-fn time id)))
         (.close cursor)
         (catch MongoException e

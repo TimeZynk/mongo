@@ -59,3 +59,19 @@
      (binding [*mongo-client*   (:client client#)
                *mongo-database* (:database client#)]
        ~@body)))
+
+; ------------------------
+; Convenience
+; ------------------------
+
+(defmacro swallow
+  "Any exception in body gets eaten and macro returns `nil`.
+
+   **Returns**
+
+   Normal execution: The result of the last encapsulated expression.
+   Exception: `nil`."
+  [& body]
+  (try
+    ~@body
+    (catch Exception _e#)))
