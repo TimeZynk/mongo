@@ -1,8 +1,7 @@
 (ns com.timezynk.mongo.test.database
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
-;;    [clojure.tools.logging :as log]
-   [com.timezynk.mongo :as mongo]
+   [com.timezynk.mongo :as m]
    [com.timezynk.mongo.test.utils.db-utils :as dbu]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
@@ -11,20 +10,20 @@
 (deftest list-dbs
   (testing "List default databases"
     (is (= #{"admin" "config" "local"}
-           (->> (mongo/list-databases)
+           (->> (m/list-databases)
                 (map :name)
                 (into #{}))))))
 
 (deftest switch-db
   (testing "Switch between databases"
-    (mongo/insert! :users {:name "1"})
-    (mongo/with-database "test-2"
-      (mongo/insert! :users {:name "2"})
-      (is (= 1 (mongo/fetch-count :users)))
-      (is (= "2" (:name (mongo/fetch-one :users)))))
-    (is (= 1 (mongo/fetch-count :users)))
-    (is (= "1" (:name (mongo/fetch-one :users)))))
+    (m/insert! :users {:name "1"})
+    (m/with-database "test-2"
+      (m/insert! :users {:name "2"})
+      (is (= 1 (m/fetch-count :users)))
+      (is (= "2" (:name (m/fetch-one :users)))))
+    (is (= 1 (m/fetch-count :users)))
+    (is (= "1" (:name (m/fetch-one :users)))))
   (testing "Cleanup"
-    (mongo/with-database "test-2"
-      (doseq [coll (mongo/list-collection-names)]
-        (mongo/drop-collection! coll)))))
+    (m/with-database "test-2"
+      (doseq [coll (m/list-collection-names)]
+        (m/drop-collection! coll)))))

@@ -2,61 +2,76 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer [deftest is testing use-fixtures]]
-  ;;  [clojure.tools.logging :as log]
-   [com.timezynk.mongo :as mongo]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu])
-  (:import [java.util.concurrent CyclicBarrier]))
+   [com.timezynk.mongo :as m]
+   [com.timezynk.mongo.schema :as s]
+   [com.timezynk.mongo.test.utils.db-utils :as dbu]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
 (deftest simple-update
-  (let [res (mongo/insert! :companies {:name "Company"})]
-    (is (= {:matched-count 1
-            :modified-count 1}
-           (mongo/update! :companies
-                          {:_id (:_id res)}
-                          {:$set {:email "test@test.com"}})))
-    (is (= "test@test.com"
-           (:email (mongo/fetch-one :companies {}))))))
+  (testing "A simple update"
+    (let [res (m/insert! :companies {:name "Company"})]
+      (is (= {:matched-count 1
+              :modified-count 1}
+             (m/update! :companies
+                        {:_id (:_id res)}
+                        {:$set {:email "test@test.com"}})))
+      (is (= "test@test.com"
+             (:email (m/fetch-one :companies {})))))))
 
 (deftest bad-update
-  (is (thrown-with-msg? Exception #"Invalid BSON field"
-                        (mongo/update! :companies
-                                       {}
-                                       {:email "test@test.com"}))))
+  (testing "Update requires `$set` or `$push`"
+    (is (thrown-with-msg? Exception #"Invalid BSON field"
+                          (m/update! :companies
+                                     {}
+                                     {:email "test@test.com"})))))
 
 (deftest upsert
-  (mongo/update! :companies {} {:$set {:name "Company"}})
-  (is (= 0 (count (mongo/fetch :companies {}))))
-  (mongo/update! :companies {} {:$set {:name "Company"}} :upsert? true)
-  (is (= 1 (count (mongo/fetch :companies {})))))
+  (testing "Upsert creates a document"
+    (m/update! :companies {} {:$set {:name "Company"}})
+    (is (= 0 (count (m/fetch :companies {}))))
+    (m/update! :companies {} {:$set {:name "Company"}} :upsert? true)
+    (is (= 1 (count (m/fetch :companies {}))))))
 
 (deftest update-many
-  (mongo/insert! :companies [{:name "Company 1"}
-                             {:name "Company 2"}])
-  (is (= {:matched-count 1
-          :modified-count 1}
-         (mongo/update-one! :companies {} {:$set {:name "Company 3"}})))
-  (is (= {:matched-count 2
-          :modified-count 2}
-         (mongo/update! :companies {} {:$set {:name "Company 4"}}))))
+  (testing "Update one or many"
+    (m/insert! :companies [{:name "Company 1"}
+                           {:name "Company 2"}])
+    (is (= {:matched-count 1
+            :modified-count 1}
+           (m/update-one! :companies {} {:$set {:name "Company 3"}})))
+    (is (= {:matched-count 2
+            :modified-count 2}
+           (m/update! :companies {} {:$set {:name "Company 4"}})))))
 
-(defn write-thread-1 [latch]
-    ;; (.await latch)
-  (Thread/sleep 1000)
-  (mongo/update! :companies {} {:$set {:name "2"}})
-    ;; (.await latch)
-  )
+(deftest transaction-update-order
+  (testing "Check that transaction enforces update order"
+    (m/insert! :companies {:name "1"})
+    (let [write-thread (fn []
+                         (Thread/sleep 1000)
+                         (m/update! :companies {} {:$set {:name "2"}}))]
+      (async/thread
+        (write-thread))
+      (m/transaction
+       (m/update! :companies {} {:$set {:name "3"}})
+       (Thread/sleep 2000)))
+    (is (= "3" (:name (m/fetch-one :companies {}))))))
 
-(deftest transaction-update
-  (mongo/insert! :companies {:name "1"})
-  (let [latch (CyclicBarrier. 2)]
-    (async/thread
-      (write-thread-1 latch))
-    (mongo/transaction
-     (mongo/update! :companies {} {:$set {:name "3"}})
-     (Thread/sleep 2000)
-      ;;  (.await latch)
-      ;;  (.await latch)
-     (is (= "3" (:name (mongo/fetch-one :companies {})))))))
+(deftest abort-transaction
+  (testing "Aborted transaction makes no updates"
+    (try
+      (m/drop-collection! :companies)
+      (catch Exception _e))
+    (m/create-collection! :companies :schema {:name (s/string)})
+    (m/insert! :companies [{:name "1"}
+                           {:name "2"}])
+    (try
+      (m/transaction
+       (m/update! :companies {:name "1"} {:$set {:name "3"}})
+       (m/update! :companies {:name "2"} {:$set {:name "4" :address "A"}}))
+      (catch Exception _e))
+    (is (= #{"1" "2"}
+           (->> (m/fetch :companies)
+                (map :name)
+                (into #{}))))))

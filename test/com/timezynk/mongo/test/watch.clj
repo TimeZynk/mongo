@@ -1,7 +1,7 @@
 (ns com.timezynk.mongo.test.watch
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
-   [com.timezynk.mongo :as mongo]
+   [com.timezynk.mongo :as m]
    [com.timezynk.mongo.watch :as w]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
   (:import [java.util Date]))
@@ -11,31 +11,31 @@
 
 (deftest test-insert
   (testing "Listen for inserts, ignore the update"
-   (let [times (atom [])
-         res (atom [])
-         on-insert (fn [time doc]
-                     (reset! times (concat @times [time]))
-                     (reset! res (concat @res [doc])))
-         _ (mongo/create-collection! :coll)
-         _ (w/on-insert :coll on-insert)
-         id-1 (:_id (mongo/insert! :coll {:name "Name1"}))
-         id-2 (:_id (mongo/insert! :coll {:name "Name2"}))]
-     (mongo/update-one! :coll {:name "Name1"} {:$set {:name "Name3"}})
-     (Thread/sleep 1000)
-     (is (= [Date Date] (map type @times)))
-     (is (= [{:_id id-1 :name "Name1"}
-             {:_id id-2 :name "Name2"}]
-            @res)))))
+    (let [times (atom [])
+          res (atom [])
+          on-insert (fn [time doc]
+                      (reset! times (concat @times [time]))
+                      (reset! res (concat @res [doc])))
+          _ (m/create-collection! :coll)
+          _ (w/on-insert :coll on-insert)
+          id-1 (:_id (m/insert! :coll {:name "Name1"}))
+          id-2 (:_id (m/insert! :coll {:name "Name2"}))]
+      (m/update-one! :coll {:name "Name1"} {:$set {:name "Name3"}})
+      (Thread/sleep 1000)
+      (is (= [Date Date] (map type @times)))
+      (is (= [{:_id id-1 :name "Name1"}
+              {:_id id-2 :name "Name2"}]
+             @res)))))
 
 (deftest test-update
   (testing "Listen for update, ignore the insert"
     (let [res (atom [])
           on-update (fn [_ doc]
                       (reset! res (concat @res [doc])))
-          _ (mongo/create-collection! :coll)
+          _ (m/create-collection! :coll)
           _ (w/on-update :coll on-update)
-          id (:_id (mongo/insert! :coll {:name "Name1"}))]
-      (mongo/update-one! :coll {:name "Name1"} {:$set {:name "Name3"}})
+          id (:_id (m/insert! :coll {:name "Name1"}))]
+      (m/update-one! :coll {:name "Name1"} {:$set {:name "Name3"}})
       (Thread/sleep 1000)
       (is (= [{:_id id :name "Name3"}]
              @res)))))
@@ -45,10 +45,10 @@
     (let [res (atom [])
           on-delete (fn [_ doc]
                       (reset! res (concat @res [doc])))
-          _ (mongo/create-collection! :coll)
+          _ (m/create-collection! :coll)
           _ (w/on-delete :coll on-delete)
-          id (:_id (mongo/insert! :coll {:name "Name1"}))]
-      (mongo/delete-one! :coll {:name "Name1"})
+          id (:_id (m/insert! :coll {:name "Name1"}))]
+      (m/delete-one! :coll {:name "Name1"})
       (Thread/sleep 1000)
       (is (= [{:_id id}]
              @res)))))
