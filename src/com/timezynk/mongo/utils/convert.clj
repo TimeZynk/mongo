@@ -15,6 +15,8 @@
     (sequential? v)
     (->> (r/map clj->doc v)
          (into []))
+    (keyword? v)
+    (name v)
     :else v))
 
 (defn doc->clj
@@ -35,7 +37,7 @@
 (defn list->doc
   "Convert a list of keywords to keys with value 1 in BSON document."
   [l]
-  (->> (iterate identity 1)
+  (->> (repeat 1)
        (interleave l)
        (apply assoc {})
        (clj->doc)))

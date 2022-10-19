@@ -6,13 +6,13 @@ When creating a collection, an optional schema can be added:
 (require '[com.timezynk.mongo :as m])
 (require '[com.timezynk.mongo.schema :as s])
 
-(m/create-colection! :users :schema {:name (s/string)
-                                     :year (s/integer :min 1900 :max 9999)
-                                     :gender (s/string :in ["F" "M" "O"])
-                                     :address (s/map {:street (s/string)
-                                                      :number (s/number)}
-                                               :optional? true)
-                                     :reg-no (s/string :optional? true :regex "[A-Z]{3}\\d{3}")})
+(m/create-collection! :users :schema {:name (s/string)
+                                      :year (s/integer :min 1900 :max 9999)
+                                      :gender (s/string :in ["F" "M" "O"])
+                                      :address (s/map {:street (s/string)
+                                                       :number (s/number)}
+                                                :optional? true)
+                                      :reg-no (s/string :optional? true :regex "[A-Z]{3}\\d{3}")})
 ```
 
 BEWARE! The schema can only be added on creation and cannot be altered afterwards.

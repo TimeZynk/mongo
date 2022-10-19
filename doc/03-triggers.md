@@ -18,9 +18,8 @@ Each of the three trigger functions &ndash; `on-insert`, `on-update`, `on-delete
 * `time` Operation time, expressed as a `java.util.Date` object.
 * `doc` A map containing either:
 
-  |||
-  |---|---|
-  | On insert | The inserted document including the newly created `:_id` field. |
-  | On update | The `:_id` field plus the updated fields of the document. |
-  | On delete | Only the `:_id` field of the deleted document. |
-  |||
+  (on insert) The inserted document including the newly created `:_id` field.
+
+  (on update) The `:_id` field plus the updated fields of the document.
+
+  (on delete) Only the `:_id` field of the deleted document.
