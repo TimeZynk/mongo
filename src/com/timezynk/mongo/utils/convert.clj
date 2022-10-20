@@ -1,7 +1,9 @@
 (ns ^:no-doc com.timezynk.mongo.utils.convert
   (:require
    [clojure.core.reducers :as r])
-  (:import [org.bson BsonValue Document]))
+  (:import [java.util ArrayList]
+           [org.bson BsonValue Document]
+           [org.joda.time.base AbstractInstant AbstractPartial]))
 
 (defn clj->doc
   "Convert a map or list of maps to BSON document."
@@ -17,6 +19,9 @@
          (into []))
     (keyword? v)
     (name v)
+    (or (instance? AbstractInstant v)
+        (instance? AbstractPartial v))
+    (.toString v)
     :else v))
 
 (defn doc->clj
@@ -32,6 +37,8 @@
          (into {}))
     (instance? BsonValue v)
     (.getValue v)
+    (= (type v) ArrayList)
+    (vec v)
     :else v))
 
 (defn list->doc
