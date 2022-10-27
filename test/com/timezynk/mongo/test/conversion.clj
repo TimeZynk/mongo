@@ -13,7 +13,11 @@
   (testing "Keyword is converted to string"
     (m/insert! :coll
                {:keyword :keyword})
-    (is (= "keyword" (:keyword (m/fetch-one :coll))))))
+    (is (= "keyword" (:keyword (m/fetch-one :coll)))))
+  (testing "Keyword with a slash preserves the slash"
+    (m/insert! :coll
+               {:my/keyword :your/keyword})
+    (is (= "your/keyword" (:my/keyword (m/fetch-one :coll))))))
 
 (deftest test-localdate
   (testing "org.joda.time.LocalDate is converted to String"
