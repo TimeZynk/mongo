@@ -11,14 +11,15 @@
   (cond
     (map? v)
     (reduce (fn [d [k v]]
-              (.append d (name k) (clj->doc v)))
+              (.append d (clj->doc k) (clj->doc v)))
             (Document.)
             v)
     (sequential? v)
     (->> (r/map clj->doc v)
          (into []))
     (keyword? v)
-    (name v)
+    (let [v-ns (namespace v)] 
+      (str v-ns (when v-ns "/") (name v)))
     (or (instance? AbstractInstant v)
         (instance? AbstractPartial v))
     (.toString v)
