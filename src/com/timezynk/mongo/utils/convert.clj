@@ -39,7 +39,8 @@
     (instance? BsonValue v)
     (.getValue v)
     (= (type v) ArrayList)
-    (vec v)
+    (->> (r/map doc->clj v)
+         (into []))
     :else v))
 
 (defn list->doc
