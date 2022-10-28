@@ -51,3 +51,10 @@
     (is (= String (-> (m/fetch-one :coll)
                       :datetime
                       type)))))
+
+(deftest test-set
+  (testing "A clojure set is converted to vec"
+    (m/insert! :coll
+               {:set #{{:a #{:b}}}})
+    (let [res (:set (m/fetch-one :coll))]
+      (is (= [{:a ["b"]}] res)))))

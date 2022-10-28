@@ -9,17 +9,17 @@
   "Convert a map or list of maps to BSON document."
   [v]
   (cond
+    (keyword? v)
+    (let [v-ns (namespace v)]
+      (str v-ns (when v-ns "/") (name v)))
     (map? v)
     (reduce (fn [d [k v]]
               (.append d (clj->doc k) (clj->doc v)))
             (Document.)
             v)
-    (sequential? v)
+    (coll? v)
     (->> (r/map clj->doc v)
          (into []))
-    (keyword? v)
-    (let [v-ns (namespace v)] 
-      (str v-ns (when v-ns "/") (name v)))
     (or (instance? AbstractInstant v)
         (instance? AbstractPartial v))
     (.toString v)
