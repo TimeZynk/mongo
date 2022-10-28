@@ -1,6 +1,6 @@
 (ns com.timezynk.mongo.test.convert
   (:require
-   [clojure.test :refer [deftest is testing use-fixtures]]
+   [clojure.test :refer [deftest is testing]]
    [com.timezynk.mongo.utils.convert :refer [clj->doc doc->clj]]))
 
 (deftest clj->doc-tests
@@ -16,7 +16,7 @@
 (deftest doc->clj-tests
   (testing "Can convert keyword"
     (is (= {:testword 1} (doc->clj (doto (org.bson.Document.) (.append "testword" 1))))))
-(testing "Can convert keyword with slash"
-  (is (= {:my/testword 1} (doc->clj (doto (org.bson.Document.) (.append "my/testword" 1))))))
+  (testing "Can convert keyword with slash"
+    (is (= {:my/testword 1} (doc->clj (doto (org.bson.Document.) (.append "my/testword" 1))))))
   (testing "Can convert keyword with double slashes"
     (is (= {(keyword "my/test/word") 1} (doc->clj (doto (org.bson.Document.) (.append "my/test/word" 1)))))))

@@ -3,8 +3,7 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
-  (:import [java.util Date]
-           [org.joda.time DateTime LocalDate LocalDateTime LocalTime]))
+  (:import [org.joda.time DateTime LocalDate LocalDateTime LocalTime]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -13,7 +12,9 @@
   (testing "Keyword is converted to string"
     (m/insert! :coll
                {:keyword :keyword})
-    (is (= "keyword" (:keyword (m/fetch-one :coll)))))
+    (is (= "keyword" (:keyword (m/fetch-one :coll))))))
+
+(deftest test-namespace
   (testing "Keyword with a slash preserves the slash"
     (m/insert! :coll
                {:my/keyword :your/keyword})
