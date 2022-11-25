@@ -52,6 +52,27 @@
                       :datetime
                       type)))))
 
+(deftest test-java-localdatetime
+  (testing "java.time.LocalDate is converted to String"
+    (m/insert! :coll
+               {:local-datetime (java.time.LocalDateTime/of 2020 1 1 10 0 0)})
+    (is (= "2020-01-01T10:00" (-> (m/fetch-one :coll)
+                                  :local-datetime)))))
+
+(deftest test-java-localdate
+  (testing "java.time.LocalDate is converted to String"
+    (m/insert! :coll
+               {:local-date (java.time.LocalDate/of 2020 1 1)})
+    (is (= "2020-01-01" (-> (m/fetch-one :coll)
+                            :local-date)))))
+
+(deftest test-java-localtime
+  (testing "java.time.LocalDate is converted to String"
+    (m/insert! :coll
+               {:local-time (java.time.LocalTime/of 10 0 1)})
+    (is (= "10:00:01" (-> (m/fetch-one :coll)
+                      :local-time)))))
+
 (deftest test-set
   (testing "A clojure set is converted to vec"
     (m/insert! :coll
