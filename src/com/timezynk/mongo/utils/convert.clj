@@ -1,7 +1,8 @@
 (ns ^:no-doc com.timezynk.mongo.utils.convert
   (:require
    [clojure.core.reducers :as r])
-  (:import [java.util ArrayList]
+  (:import [java.time.temporal Temporal]
+           [java.util ArrayList]
            [org.bson BsonValue Document]
            [org.joda.time.base AbstractInstant AbstractPartial]))
 
@@ -20,7 +21,8 @@
     (coll? v)
     (->> (r/map clj->doc v)
          (into []))
-    (or (instance? AbstractInstant v)
+    (or (instance? Temporal v)
+        (instance? AbstractInstant v)
         (instance? AbstractPartial v))
     (.toString v)
     :else v))
