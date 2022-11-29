@@ -181,7 +181,7 @@
    
    ```Clojure
    ; Set field-1 to current date and time:
-   (create-collection! :coll :schema {:field-1 (java.util.Date.)})
+   (create-collection! :coll :schema {:field-1 (date-time)})
    ```"
   {:arglists '([& :optional? <boolean>])}
   [& options]
