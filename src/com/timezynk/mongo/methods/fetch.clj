@@ -8,7 +8,9 @@
   (cond-> result
     collation (.collation collation)
     limit     (.limit limit)
-    only      (.projection (convert/clj->doc only))
+    only      (.projection (if (map? only)
+                             (convert/clj->doc only)
+                             (convert/list->doc only)))
     skip      (.skip skip)
     sort      (.sort (convert/clj->doc sort))))
 
