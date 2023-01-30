@@ -1,4 +1,4 @@
-(defproject com.timezynk/mongo "0.6.14"
+(defproject com.timezynk/mongo "0.6.15"
   :description "Clojure wrapper for com.mongodb.client Java API."
   :url "https://github.com/TimeZynk/mongo"
   :license {:name "MIT"
@@ -9,6 +9,7 @@
                  [ch.qos.logback/logback-classic "1.2.9"]
                  [ch.qos.logback.contrib/logback-jackson "0.1.5"]
                  [ch.qos.logback.contrib/logback-json-classic "0.1.5"]
+                 [com.timezynk/useful "1.20.3"]
                  [joda-time "2.9.2"]
                  [org.apache.logging.log4j/log4j-to-slf4j "2.17.0"]
                  [org.clojure/clojure "1.10.3"]
