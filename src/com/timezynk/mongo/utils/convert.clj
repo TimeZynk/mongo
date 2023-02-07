@@ -1,10 +1,12 @@
 (ns ^:no-doc com.timezynk.mongo.utils.convert
   (:require
    [clojure.core.reducers :as r])
-  (:import [java.time.temporal Temporal]
-           [java.util ArrayList]
-           [org.bson BsonValue Document]
-           [org.joda.time.base AbstractInstant AbstractPartial]))
+  (:import [java.util ArrayList]
+           [org.bson BsonValue Document]))
+
+;; Define your own methods to expand type conversion
+(defmulti to-mongo (fn [v] (type v)))
+(defmethod to-mongo :default [v] v)
 
 (defn clj->doc
   "Convert a map or list of maps to BSON document."
@@ -21,11 +23,7 @@
     (coll? v)
     (->> (r/map clj->doc v)
          (into []))
-    (or (instance? Temporal v)
-        (instance? AbstractInstant v)
-        (instance? AbstractPartial v))
-    (.toString v)
-    :else v))
+    :else (to-mongo v)))
 
 (defn doc->clj
   "Convert a BSON document to map."
