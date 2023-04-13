@@ -258,6 +258,13 @@
    | ---           | --- |
    | `name`        | `keyword/string` Collection name. |
    | `:name`       | `optional keyword/string` New name. |
+   | `:collation`  | `optional collation object` The collation of the collection. |
+   | `:schema`     | `optional map` The schema validation map. |
+   | `:validation` | `optional map` Validation logic outside of the schema. |
+   | `:level`      | `optional enum` Validaton level: |
+   |               | `:strict` Apply validation rules to all inserts and all updates. Default value. |
+   |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents. |
+   |               | `:off` No validation for inserts or updates. |
    
    **Returns**
    
@@ -268,7 +275,7 @@
    ```Clojure
    (modify-collection! :coll :name :coll-2)
    ```"
-  {:arglists '([<name> & :name <string>])}
+  {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
   (modify-collection (coll/get-collection coll) options))
 
