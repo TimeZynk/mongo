@@ -22,12 +22,15 @@
   (reset! mongo-uri {:uri uri
                      :options options}))
 
-(def ^:no-doc make-connection
-  (delay (let [uri (or @mongo-uri
-                       {:uri (System/getenv "MONGO_URI")}
-                       (throw (MongoClientException. "Call set-mongo-uri! or define MONGO_URI environment variable prior to calling wrap-mongo")))]
-           (log/info "MongoDB servers" uri)
-           (connection-method (:uri uri) (:options uri)))))
+(defn current-uri []
+  @mongo-uri)
+
+(defn ^:no-doc make-connection []
+  (let [uri (or @mongo-uri
+                {:uri (System/getenv "MONGO_URI")}
+                (throw (MongoClientException. "Call set-mongo-uri! or define MONGO_URI environment variable prior to calling wrap-mongo")))]
+    (log/info "MongoDB servers" uri)
+    (connection-method (:uri uri) (:options uri))))
 
 (defmacro wrap-mongo
   "Functionally set up or change mongodb connection, using a persistent connection. Reverts to earlier settings when leaving scope.
@@ -55,7 +58,7 @@
    ```"
   {:arglists '([& <body>])}
   [& body]
-  `(let [client# (force make-connection)]
+  `(let [client# (make-connection)]
      (binding [*mongo-client*   (:client client#)
                *mongo-database* (:database client#)]
        ~@body)))
