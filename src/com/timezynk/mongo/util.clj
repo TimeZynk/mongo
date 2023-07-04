@@ -22,9 +22,6 @@
   (reset! mongo-uri {:uri uri
                      :options options}))
 
-(defn current-uri []
-  @mongo-uri)
-
 (def ^:private connection-map
   (atom {}))
 
