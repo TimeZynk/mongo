@@ -22,7 +22,8 @@
                :name {:bsonType "string"}
                :address {:bsonType "string"}}
               :additionalProperties false}}
-            :validationLevel "strict"}
+            :validationLevel "strict"
+            :validationAction "error"}
            (:options (m/collection-info :users)))))
   (testing "Inserts that should pass validation"
     (try
