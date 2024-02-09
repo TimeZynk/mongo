@@ -4,7 +4,7 @@
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]]
    [com.timezynk.mongo.schema :refer [convert-schema]])
   (:import
-   [com.mongodb.client.model CreateCollectionOptions ValidationLevel ValidationOptions]))
+   [com.mongodb.client.model CreateCollectionOptions ValidationAction ValidationLevel ValidationOptions]))
 
 (defn- with-options [{:keys [collation level schema validation]}]
   (cond-> (CreateCollectionOptions.)
@@ -18,7 +18,8 @@
                                 (.validationLevel (case (or level :strict)
                                                     :moderate ValidationLevel/MODERATE
                                                     :off      ValidationLevel/OFF
-                                                    :strict   ValidationLevel/STRICT))))))
+                                                    :strict   ValidationLevel/STRICT))
+                                (.validationAction ValidationAction/ERROR)))))
 
 (defmulti create-collection-method
   (fn [_name options]

@@ -1,8 +1,8 @@
-(defproject com.timezynk/mongo "0.7.0"
+(defproject com.timezynk/mongo "0.8.0"
   :description "Clojure wrapper for com.mongodb.client Java API."
   :url "https://github.com/TimeZynk/mongo"
   :license {:name "MIT"
-            :url "https://mit-license.org"}
+            :url  "https://mit-license.org"}
   :scm {:name "git"
         :url  "https://github.com/TimeZynk/mongo"}
   :dependencies [[ch.qos.logback/logback-core "1.2.9"]

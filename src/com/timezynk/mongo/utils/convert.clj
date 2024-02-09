@@ -1,6 +1,7 @@
 (ns ^:no-doc com.timezynk.mongo.utils.convert
   (:require
-   [clojure.core.reducers :as r])
+   [clojure.core.reducers :as r]
+   [com.timezynk.mongo.hooks :as hooks])
   (:import [java.util ArrayList]
            [org.bson BsonValue Document]))
 
@@ -16,13 +17,12 @@
     (let [v-ns (namespace v)]
       (str v-ns (when v-ns "/") (name v)))
     (map? v)
-    (reduce (fn [d [k v]]
-              (.append d (clj->doc k) (clj->doc v)))
-            (Document.)
-            v)
+    (->> (hooks/*write-hook* v)
+         (reduce (fn [d [k v]]
+                   (.append d (clj->doc k) (clj->doc v)))
+                 (Document.)))
     (coll? v)
-    (->> (r/map clj->doc v)
-         (into []))
+    (mapv clj->doc v)
     :else (to-mongo v)))
 
 (defn doc->clj
@@ -35,12 +35,12 @@
          (r/map (fn [x]
                   [(keyword (.getKey x))
                    (doc->clj (.getValue x))]))
-         (into {}))
+         (into {})
+         (hooks/*read-hook*))
     (instance? BsonValue v)
     (.getValue v)
     (= (type v) ArrayList)
-    (->> (r/map doc->clj v)
-         (into []))
+    (mapv doc->clj v)
     :else v))
 
 (defn list->doc
