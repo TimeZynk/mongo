@@ -9,6 +9,9 @@
 (defmulti to-mongo (fn [v] (type v)))
 (defmethod to-mongo :default [v] v)
 
+(defmulti from-mongo (fn [v] (type v)))
+(defmethod from-mongo :default [v] v)
+
 (defn clj->doc
   "Convert a map or list of maps to BSON document."
   [v]
@@ -41,7 +44,7 @@
     (.getValue v)
     (= (type v) ArrayList)
     (mapv doc->clj v)
-    :else v))
+    :else (from-mongo v)))
 
 (defn list->doc
   "Convert a list of keywords to keys with value 1 in BSON document."
