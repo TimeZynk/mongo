@@ -336,6 +336,12 @@
 ; Fetch
 ; ------------------------
 
+(defn- ^:no-doc fetch-docs [coll query options]
+  (-> (fetch-method (coll/get-collection coll)
+                    (convert/clj->doc query)
+                    options)
+      (convert/it->clj)))
+
 (defn fetch
   "Fetch documents from collection.
    
@@ -361,11 +367,8 @@
    ```"
   {:arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
-  ([coll] (fetch coll {}))
-  ([coll query & options] (-> (fetch-method (coll/get-collection coll)
-                                            (convert/clj->doc query)
-                                            options)
-                              (convert/it->clj))))
+  ([coll]                 (fetch coll {}))
+  ([coll query & options] (fetch-docs coll query options)))
 
 (defn fetch-one
   "Return only the first document retrieved.
@@ -374,14 +377,19 @@
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
    | `query`      | `map` A standard MongoDB query. |
+   | `:collation` | `optional collation object` Collation used. |
+   | `:only`      | `optional map` A MongoDB map of fields to include or exclude. |
+   | `:skip`      | `optional int` Number of documents to skip before fetching. |
+   | `:sort`      | `optional map` A MongoDB map of sorting criteria. |
    
    **Returns**
    
    A single document or `nil`."
-  {:arglists '([<collection>] [<collection> <query>])}
-  ([coll]       (fetch-one coll {}))
-  ([coll query] (-> (fetch coll query :limit 1)
-                    (first))))
+  {:arglists '([<collection>]
+               [<collection> <query> & :collation <collation object> :only {} :skip <count> :sort {}])}
+  ([coll]                 (fetch-one coll {}))
+  ([coll query & options] (-> (fetch-docs coll query (concat options [:limit 1]))
+                              (first))))
 
 (defn fetch-count
   "Count the number of documents returned.

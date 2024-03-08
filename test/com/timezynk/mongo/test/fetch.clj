@@ -26,9 +26,27 @@
               {:name "3" :username "user 3"}
               {:name "4" :username "user 4"}])
   (is (map? (m/fetch-one :companies)))
-  (is (= 1 (count (m/fetch :companies {} :limit 1))))
-  (is (= 2 (count (m/fetch :companies {} :skip 2))))
+  (is (= 1 (count (m/fetch :companies
+                           {}
+                           :limit 1))))
+  (is (= 2 (count (m/fetch :companies
+                           {}
+                           :skip 2))))
   (is (= [{:username "user 4"}]
-         (m/fetch :companies {:name "4"} :only {:_id 0 :username 1})))
+         (m/fetch :companies
+                  {:name "4"}
+                  :only {:_id 0 :username 1})))
   (is (= [{:name "4"} {:name "3"} {:name "2"} {:name "1"}]
-         (m/fetch :companies {} :only {:_id 0 :name 1} :sort {:name -1}))))
+         (m/fetch :companies
+                  {}
+                  :only {:_id 0 :name 1}
+                  :sort {:name -1})))
+  (is (= {:name "1"}
+         (m/fetch-one :companies
+                      {}
+                      :only {:_id 0 :name 1})))
+  (is (= {:name "4"}
+         (m/fetch-one :companies
+                      {}
+                      :only {:_id 0 :name 1}
+                      :sort {:name -1}))))
