@@ -7,21 +7,6 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
-(deftest empty-replace
-  (testing "Update with empty list"
-    (let [res (m/replace-one! :coll
-                              {}
-                              [])]
-      (is (= {:matched-count 0
-              :modified-count 0}
-             res)))
-    (let [res (m/replace-one! :coll
-                              {}
-                              '())]
-      (is (= {:matched-count 0
-              :modified-count 0}
-             res)))))
-
 (deftest simple-replace
   (testing "Create a document, replace it"
     (let [res (m/insert! :companies {:name "1"})]
@@ -41,6 +26,17 @@
                           (m/replace-one! :coll
                                           {}
                                           nil))))
+  (testing "Replace with empty list"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/replace-one! :coll
+                                          {}
+                                          [])))
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/replace-one! :coll
+                                          {}
+                                          '()))))
   (testing "Using $set, as in an update, should not work"
     (is (thrown-with-msg? IllegalArgumentException
                           #"Invalid BSON field"

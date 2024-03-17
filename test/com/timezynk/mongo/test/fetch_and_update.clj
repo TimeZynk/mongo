@@ -8,30 +8,30 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
-(deftest empty-update
-  (testing "Update with empty list"
-    (let [res (m/fetch-and-update-one! :coll
-                                       {}
-                                       [])]
-      (is (nil? res)))
-    (let [res (m/fetch-and-update-one! :coll
-                                       {}
-                                       '())]
-      (is (nil? res)))))
-
 (deftest bad-update
   (testing "Update with nil"
     (is (thrown-with-msg? MongoCommandException
-                          #""
+                          #"Either an update or remove=true must be specified"
                           (m/fetch-and-update-one! :coll
                                                    {}
                                                    nil))))
-  #_(testing "Update requires valid modifier"
-      (is (thrown-with-msg? IllegalArgumentException
-                            #"not a valid modifier: :email"
-                            (m/fetch-and-update-one! :coll
-                                                     {}
-                                                     {:email "test@test.com"}))))
+  (testing "Update with empty list"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/fetch-and-update-one! :coll
+                                                   {}
+                                                   [])))
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/fetch-and-update-one! :coll
+                                                   {}
+                                                   '()))))
+  (testing "Update requires valid modifier"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"not a valid modifier: :email"
+                          (m/fetch-and-update-one! :coll
+                                                   {}
+                                                   {:email "test@test.com"}))))
   (testing "Pipeline with wrong stage"
     (is (thrown-with-msg? MongoCommandException
                           #"Unrecognized pipeline stage name"

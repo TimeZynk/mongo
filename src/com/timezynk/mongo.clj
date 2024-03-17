@@ -5,6 +5,7 @@
           Requires MongoDB version 4.4 or later."}
   (:require
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-database* *mongo-session*]]
+   [com.timezynk.mongo.guards :as guards]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
@@ -16,16 +17,17 @@
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
    [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
    [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method]]
-   [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method]]
-   [com.timezynk.mongo.methods.fetch-and-update :refer [fetch-and-update-method]]
+   [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method fetch-and-replace-options]]
+   [com.timezynk.mongo.methods.fetch-and-update :refer [fetch-and-update-method fetch-and-update-options]]
    [com.timezynk.mongo.methods.insert :refer [insert-method insert-options]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection]]
-   [com.timezynk.mongo.methods.replace :refer [replace-method]]
-   [com.timezynk.mongo.methods.update :refer [update-method update-one-method]]
+   [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]]
+   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options]]
    [com.timezynk.mongo.utils.collection :as coll]
-   [com.timezynk.mongo.utils.convert :as convert])
+   [com.timezynk.mongo.utils.convert :as convert]
+   [com.timezynk.mongo.utils.return-early :refer [catch-return]])
   (:import [com.mongodb MongoClientSettings]
            [com.mongodb.client ClientSession TransactionBody]
            [com.mongodb.client.model Collation]))
@@ -422,13 +424,13 @@
 
 (defn- ^:no-doc insert-docs [coll doc options]
   {:pre [coll]}
-  (if (= [] doc) ; the empty list should not throw exception
-    doc
-    (let [doc (convert/clj->doc doc)]
-      (-> (coll/get-collection coll)
-          (insert-options options)
-          (insert-method doc))
-      (convert/doc->clj doc))))
+  (catch-return
+   (guards/*insert-guard* doc)
+   (let [doc (convert/clj->doc doc)]
+     (-> (coll/get-collection coll)
+         (insert-options options)
+         (insert-method doc))
+     (convert/doc->clj doc))))
 
 (defn insert!
   "Insert one document or a list thereof in a collection. Inserting a list is atomic.
@@ -497,12 +499,14 @@
   {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
   [coll query update & options]
   {:pre [coll query]}
-  (let [result (update-method (coll/get-collection coll)
-                              (convert/clj->doc query)
-                              (convert/clj->doc update)
-                              options)]
-    {:matched-count  (.getMatchedCount result)
-     :modified-count (.getModifiedCount result)}))
+  (catch-return
+   (guards/*update-guard* update)
+   (let [result (update-method (coll/get-collection coll)
+                               (convert/clj->doc query)
+                               (convert/clj->doc update)
+                               (update-options options))]
+     {:matched-count  (.getMatchedCount result)
+      :modified-count (.getModifiedCount result)})))
 
 (defn update-one!
   "Update first matching document.
@@ -529,12 +533,14 @@
   {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
   [coll query update & options]
   {:pre [coll query]}
-  (let [result (update-one-method (coll/get-collection coll)
-                                  (convert/clj->doc query)
-                                  (convert/clj->doc update)
-                                  options)]
-    {:matched-count  (.getMatchedCount result)
-     :modified-count (.getModifiedCount result)}))
+  (catch-return
+   (guards/*update-guard* update)
+   (let [result (update-one-method (coll/get-collection coll)
+                                   (convert/clj->doc query)
+                                   (convert/clj->doc update)
+                                   (update-options options))]
+     {:matched-count  (.getMatchedCount result)
+      :modified-count (.getModifiedCount result)})))
 
 (defn fetch-and-update-one!
   "Update first matching document.
@@ -552,11 +558,13 @@
   {:arglists '([<collection> <query> & :return-new? <boolean> :upsert? <boolean>])}
   [coll query update & options]
   {:pre [coll query]}
-  (-> (fetch-and-update-method (coll/get-collection coll)
-                               (convert/clj->doc query)
-                               (convert/clj->doc update)
-                               options)
-      (convert/doc->clj)))
+  (catch-return
+   (guards/*update-guard* update)
+   (-> (fetch-and-update-method (coll/get-collection coll)
+                                (convert/clj->doc query)
+                                (convert/clj->doc update)
+                                (fetch-and-update-options options))
+       (convert/doc->clj))))
 
 ; ------------------------
 ; Replace
@@ -581,22 +589,26 @@
   {:arglists '([<collection> <query> <document> & :upsert? <boolean>])}
   [coll query doc & options]
   {:pre [coll query]}
-  (let [result (replace-method (coll/get-collection coll)
-                               (convert/clj->doc query)
-                               (convert/clj->doc doc)
-                               options)]
-    {:matched-count  (.getMatchedCount result)
-     :modified-count (.getModifiedCount result)}))
+  (catch-return
+   (guards/*replace-guard* doc)
+   (let [result (replace-method (coll/get-collection coll)
+                                (convert/clj->doc query)
+                                (convert/clj->doc doc)
+                                (replace-options options))]
+     {:matched-count  (.getMatchedCount result)
+      :modified-count (.getModifiedCount result)})))
 
 ; TODO: test
 (defn fetch-and-replace-one!
   [coll query doc & options]
   {:pre [coll query]}
-  (-> (fetch-and-replace-method (coll/get-collection coll)
-                                (convert/clj->doc query)
-                                (convert/clj->doc doc)
-                                options)
-      (convert/doc->clj)))
+  (catch-return
+   (guards/*replace-guard* doc)
+   (-> (fetch-and-replace-method (coll/get-collection coll)
+                                 (convert/clj->doc query)
+                                 (convert/clj->doc doc)
+                                 (fetch-and-replace-options options))
+       (convert/doc->clj))))
 
 ; ------------------------
 ; Delete

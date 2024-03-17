@@ -2,7 +2,8 @@
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu]))
+   [com.timezynk.mongo.test.utils.db-utils :as dbu])
+  (:import [com.mongodb MongoWriteException]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -17,7 +18,7 @@
       (catch Exception _e
         (is false))))
   (testing "Inserts that don't pass validation"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:name "N"
                                              :address "A"})))))

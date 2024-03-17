@@ -39,7 +39,7 @@
                           (m/update! :coll
                                      {}
                                      '()))))
-  #_(testing "Update requires valid modifier"
+  (testing "Update requires valid modifier"
       (is (thrown-with-msg? IllegalArgumentException
                             #"not a valid modifier: :email"
                             (m/update! :coll

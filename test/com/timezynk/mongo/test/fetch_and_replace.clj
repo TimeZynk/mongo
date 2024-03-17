@@ -7,23 +7,24 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
-(deftest empty-replace
-  (testing "Update with empty list"
-    (let [res (m/fetch-and-replace-one! :coll
-                                        {}
-                                        [])]
-      (is (nil? res)))
-    (let [res (m/fetch-and-replace-one! :coll
-                                        {}
-                                        '())]
-      (is (nil? res)))))
-
 (deftest bad-replace
-  (is (thrown-with-msg? IllegalArgumentException
-                        #"replacement can not be null"
-                        (m/fetch-and-replace-one! :coll
-                                                  {}
-                                                  nil))))
+  (testing "Replace with nil"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"replacement can not be null"
+                          (m/fetch-and-replace-one! :coll
+                                                    {}
+                                                    nil))))
+  (testing "Replace with empty list"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/fetch-and-replace-one! :coll
+                                                    {}
+                                                    [])))
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/fetch-and-replace-one! :coll
+                                                    {}
+                                                    '())))))
 
 (deftest replace-and-fetch-old
   (m/insert! :coll {:name "1"})
