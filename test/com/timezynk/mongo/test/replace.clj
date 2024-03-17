@@ -7,6 +7,21 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
+(deftest empty-replace
+  (testing "Update with empty list"
+    (let [res (m/replace-one! :coll
+                              {}
+                              [])]
+      (is (= {:matched-count 0
+              :modified-count 0}
+             res)))
+    (let [res (m/replace-one! :coll
+                              {}
+                              '())]
+      (is (= {:matched-count 0
+              :modified-count 0}
+             res)))))
+
 (deftest simple-replace
   (testing "Create a document, replace it"
     (let [res (m/insert! :companies {:name "1"})]
@@ -20,8 +35,15 @@
                           [:name :username]))))))
 
 (deftest bad-replace
+  (testing "Replace with nil"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"replacement can not be null"
+                          (m/replace-one! :coll
+                                          {}
+                                          nil))))
   (testing "Using $set, as in an update, should not work"
-    (is (thrown-with-msg? Exception #"Invalid BSON field"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid BSON field"
                           (m/replace-one! :companies
                                           {}
                                           {:$set {:email "test@test.com"}})))))

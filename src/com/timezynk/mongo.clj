@@ -64,6 +64,7 @@
    ```"
   {:arglists '([<uri> & :retry-writes? <boolean> :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
   ^MongoClientSettings [^String uri & options]
+  {:pre [uri]}
   (connection-method uri options))
 
 (defn close-connection!
@@ -249,6 +250,7 @@
    ```"
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
+  {:pre [coll]}
   (create-collection-method (name coll) options))
 
 (defn modify-collection!
@@ -277,9 +279,11 @@
    ```"
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
+  {:pre [coll]}
   (modify-collection (coll/get-collection coll) options))
 
 (defn drop-collection! [coll]
+  {:pre [coll]}
   (drop-collection-method (coll/get-collection coll)))
 
 ; ------------------------
@@ -322,6 +326,7 @@
    ```"
   {:arglists '([<collection> <keys> & :collation <collation object> :background? <boolean> :name <string> :filter {} :sparse? <boolean> :unique? <boolean>])}
   [coll keys & options]
+  {:pre [coll keys]}
   (create-index-method (coll/get-collection coll)
                        (if (map? keys)
                          (convert/clj->doc keys)
@@ -329,6 +334,7 @@
                        options))
 
 (defn drop-index! [coll index]
+  {:pre [coll index]}
   (drop-index-method (coll/get-collection coll)
                      index))
 
@@ -337,6 +343,7 @@
 ; ------------------------
 
 (defn- ^:no-doc fetch-docs [coll query options]
+  {:pre [coll query]}
   (-> (fetch-method (coll/get-collection coll)
                     (convert/clj->doc query)
                     options)
@@ -404,12 +411,24 @@
    Number of matching documents."
   {:arglists '([<collection>] [<collection> <query>])}
   ([coll]       (fetch-count coll {}))
-  ([coll query] (count-method (coll/get-collection coll)
-                              (convert/clj->doc query))))
+  ([coll query]
+   {:pre [coll query]}
+   (count-method (coll/get-collection coll)
+                 (convert/clj->doc query))))
 
 ; ------------------------
 ; Insert
 ; ------------------------
+
+(defn- ^:no-doc insert-docs [coll doc options]
+  {:pre [coll]}
+  (if (= [] doc) ; the empty list should not throw exception
+    doc
+    (let [doc (convert/clj->doc doc)]
+      (-> (coll/get-collection coll)
+          (insert-options options)
+          (insert-method doc))
+      (convert/doc->clj doc))))
 
 (defn insert!
   "Insert one document or a list thereof in a collection. Inserting a list is atomic.
@@ -441,11 +460,13 @@
   {:arglists '([<collection> <document> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]]
                [<collection> <document-list> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
   [coll doc & options]
-  (let [doc (convert/clj->doc doc)]
-    (-> (coll/get-collection coll)
-        (insert-options options)
-        (insert-method doc))
-    (convert/doc->clj doc)))
+  (insert-docs coll doc options))
+
+(defn insert
+  "This is identical to `insert!`, except if payload is nil, do a nil-punt instead of throwing exception."
+  [coll doc & options]
+  (when doc
+    (insert-docs coll doc options)))
 
 ; ------------------------
 ; Update
@@ -458,7 +479,7 @@
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
    | `query`      | `map` A standard MongoDB query. |
-   | `update`     | `map` A valid update document. Must use `$set` or `$push`, throws exception otherwise. |
+   | `update`     | `map` A valid update document. |
    | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
 
    **Returns**
@@ -475,6 +496,7 @@
    ```"
   {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
   [coll query update & options]
+  {:pre [coll query]}
   (let [result (update-method (coll/get-collection coll)
                               (convert/clj->doc query)
                               (convert/clj->doc update)
@@ -489,7 +511,7 @@
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
    | `query`      | `map` A standard MongoDB query. |
-   | `update`     | `map` A valid update document. Must use `$set` or `$push`, throws exception otherwise. |
+   | `update`     | `map` A valid update document. |
    | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
    
    **Returns**
@@ -506,6 +528,7 @@
    ```"
   {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
   [coll query update & options]
+  {:pre [coll query]}
   (let [result (update-one-method (coll/get-collection coll)
                                   (convert/clj->doc query)
                                   (convert/clj->doc update)
@@ -528,6 +551,7 @@
    A single document or nil."
   {:arglists '([<collection> <query> & :return-new? <boolean> :upsert? <boolean>])}
   [coll query update & options]
+  {:pre [coll query]}
   (-> (fetch-and-update-method (coll/get-collection coll)
                                (convert/clj->doc query)
                                (convert/clj->doc update)
@@ -556,6 +580,7 @@
    ```"
   {:arglists '([<collection> <query> <document> & :upsert? <boolean>])}
   [coll query doc & options]
+  {:pre [coll query]}
   (let [result (replace-method (coll/get-collection coll)
                                (convert/clj->doc query)
                                (convert/clj->doc doc)
@@ -564,7 +589,9 @@
      :modified-count (.getModifiedCount result)}))
 
 ; TODO: test
-(defn fetch-and-replace-one! [coll query doc & options]
+(defn fetch-and-replace-one!
+  [coll query doc & options]
+  {:pre [coll query]}
   (-> (fetch-and-replace-method (coll/get-collection coll)
                                 (convert/clj->doc query)
                                 (convert/clj->doc doc)
@@ -589,10 +616,10 @@
    {:deleted-count <number of matching documents>}
    ```"
   {:arglists '([<collection> <query>])}
-  [coll query & options]
+  [coll query]
+  {:pre [coll query]}
   (let [result (delete-method (coll/get-collection coll)
-                              (convert/clj->doc query)
-                              options)]
+                              (convert/clj->doc query))]
     {:deleted-count (.getDeletedCount result)}))
 
 (defn delete-one!
@@ -609,14 +636,16 @@
    {:deleted-count <0 or 1>}
    ```"
   {:arglists '([<collection> <query>])}
-  [coll query & options]
+  [coll query]
+  {:pre [coll query]}
   (let [result (delete-one-method (coll/get-collection coll)
-                                  (convert/clj->doc query)
-                                  options)]
+                                  (convert/clj->doc query))]
     {:deleted-count (.getDeletedCount result)}))
 
 ; TODO: test
-(defn fetch-and-delete-one! [coll query]
+(defn fetch-and-delete-one!
+  [coll query]
+  {:pre [query]}
   (-> (fetch-and-delete-method (coll/get-collection coll)
                                (convert/clj->doc query))
       (convert/doc->clj)))
@@ -674,6 +703,7 @@
    ```"
   {:arglists '([<collection> & <pipeline>])}
   [coll & pipeline]
+  {:pre [coll pipeline]}
   (-> (aggregate-method (coll/get-collection coll)
                         (convert/clj->doc pipeline))
       (convert/it->clj)))
