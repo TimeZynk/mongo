@@ -1,6 +1,7 @@
 (ns ^:no-doc com.timezynk.mongo.methods.fetch-and-update
   (:require
-   [com.timezynk.mongo.config :refer [*mongo-session*]])
+   [com.timezynk.mongo.config :refer [*mongo-session*]]
+   [clojure.tools.logging :as log])
   (:import [org.bson Document]
            [com.mongodb.client.model FindOneAndUpdateOptions ReturnDocument]))
 
@@ -19,4 +20,9 @@
   (.findOneAndUpdate coll *mongo-session* query update options))
 
 (defmethod fetch-and-update-method {:session false} [coll query update options]
+  (log/spy "3333")
+  (log/spy coll)
+  (log/spy query)
+  (log/spy update)
+  (log/spy options)
   (.findOneAndUpdate coll query update options))

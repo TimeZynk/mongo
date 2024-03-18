@@ -40,11 +40,11 @@
                                      {}
                                      '()))))
   (testing "Update requires valid modifier"
-      (is (thrown-with-msg? IllegalArgumentException
-                            #"not a valid modifier: :email"
-                            (m/update! :coll
-                                       {}
-                                       {:email "test@test.com"}))))
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"not a valid modifier: :email"
+                          (m/update! :coll
+                                     {}
+                                     {:email "test@test.com"}))))
   (testing "Update with null value"
     (is (thrown-with-msg? MongoWriteException
                           #"Modifiers operate on fields but we found type null instead"

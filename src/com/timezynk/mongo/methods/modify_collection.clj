@@ -1,8 +1,8 @@
 (ns ^:no-doc com.timezynk.mongo.methods.modify-collection
   (:require
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]]
-   [com.timezynk.mongo.schema :refer [convert-schema]]
-   [com.timezynk.mongo.utils.convert :as convert])
+   [com.timezynk.mongo.convert-types :refer [clj->doc]]
+   [com.timezynk.mongo.schema :refer [convert-schema]])
   (:import [com.mongodb MongoNamespace]
            [org.bson Document]))
 
@@ -22,7 +22,7 @@
 (defn- set-schema [coll schema]
   (-> (Document.)
       (.append "collMod" (-> coll .getNamespace .getCollectionName))
-      (.append "validator" (-> schema convert-schema convert/clj->doc))))
+      (.append "validator" (-> schema convert-schema clj->doc))))
 
 (defmulti set-schema-method
   (fn [_coll _schema] (some? *mongo-session*)))

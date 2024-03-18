@@ -10,8 +10,8 @@
 
 (deftest bad-update
   (testing "Update with nil"
-    (is (thrown-with-msg? MongoCommandException
-                          #"Either an update or remove=true must be specified"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"update can not be null"
                           (m/fetch-and-update-one! :coll
                                                    {}
                                                    nil))))
@@ -56,8 +56,15 @@
     (is (= "2" (:name res)))))
 
 (deftest upsert-and-fetch-old
-  (is (nil? (:name (m/fetch-and-update-one! :companies {} {:$set {:name "2"}} :upsert? true))))
+  (is (nil? (:name (m/fetch-and-update-one! :companies
+                                            {}
+                                            {:$set {:name "2"}}
+                                            :upsert? true))))
   (is (= "2" (:name (m/fetch-one :companies)))))
 
 (deftest upsert-and-fetch-new
-  (is (= "2" (:name (m/fetch-and-update-one! :companies {} {:$set {:name "2"}} :upsert? true :return-new? true)))))
+  (is (= "2" (:name (m/fetch-and-update-one! :companies
+                                             {}
+                                             {:$set {:name "2"}}
+                                             :upsert? true
+                                             :return-new? true)))))

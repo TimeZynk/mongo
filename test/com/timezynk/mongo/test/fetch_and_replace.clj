@@ -35,16 +35,16 @@
              (dissoc :_id))))
   (is (= {:mail "2"}
          (-> (m/fetch-one :coll)
-             (dissoc :_id))))
+             (dissoc :_id)))))
 
-  (deftest replace-and-fetch-new
-    (m/insert! :coll {:name "1"})
-    (is (= {:mail "2"}
-           (-> (m/fetch-and-replace-one! :coll
-                                         {}
-                                         {:mail "2"}
-                                         :return-new? true)
-               (dissoc :_id))))))
+(deftest replace-and-fetch-new
+  (m/insert! :coll {:name "1"})
+  (is (= {:mail "2"}
+         (-> (m/fetch-and-replace-one! :coll
+                                       {}
+                                       {:mail "2"}
+                                       :return-new? true)
+             (dissoc :_id)))))
 
 (deftest upsert-and-fetch-old
   (is (nil? (m/fetch-and-replace-one! :coll

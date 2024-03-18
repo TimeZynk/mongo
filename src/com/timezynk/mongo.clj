@@ -5,7 +5,8 @@
           Requires MongoDB version 4.4 or later."}
   (:require
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-database* *mongo-session*]]
-   [com.timezynk.mongo.guards :as guards]
+   [com.timezynk.mongo.convert-types :refer [clj->doc doc->clj it->clj list->doc]]
+   [com.timezynk.mongo.guards :as guards :refer [catch-return]]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
@@ -25,11 +26,9 @@
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection]]
    [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]]
    [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options]]
-   [com.timezynk.mongo.utils.collection :as coll]
-   [com.timezynk.mongo.utils.convert :as convert]
-   [com.timezynk.mongo.utils.return-early :refer [catch-return]])
+   [clojure.tools.logging :as log])
   (:import [com.mongodb MongoClientSettings]
-           [com.mongodb.client ClientSession TransactionBody]
+           [com.mongodb.client ClientSession MongoCollection TransactionBody]
            [com.mongodb.client.model Collation]))
 
 ; ------------------------
@@ -144,7 +143,7 @@
    A lazy sequence of database objects."
   []
   (-> (list-databases-method)
-      (convert/it->clj)))
+      (it->clj)))
 
 ; ------------------------
 ; Collation
@@ -198,11 +197,15 @@
 ; Collection
 ; ------------------------
 
+(defn ^:no-doc get-collection ^MongoCollection [coll]
+  (.getCollection *mongo-database*
+                  (name coll)))
+
 (defn list-collections
   "List full info of all collections in database."
   []
   (-> (list-collections-method *mongo-database*)
-      (convert/it->clj)))
+      (it->clj)))
 
 (defn list-collection-names
   "List keyworded names of all collections in database."
@@ -282,19 +285,19 @@
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
   {:pre [coll]}
-  (modify-collection (coll/get-collection coll) options))
+  (modify-collection (get-collection coll) options))
 
 (defn drop-collection! [coll]
   {:pre [coll]}
-  (drop-collection-method (coll/get-collection coll)))
+  (drop-collection-method (get-collection coll)))
 
 ; ------------------------
 ; Index
 ; ------------------------
 
 (defn list-indexes [coll]
-  (-> (.listIndexes (coll/get-collection coll))
-      (convert/it->clj)))
+  (-> (.listIndexes (get-collection coll))
+      (it->clj)))
 
 (defn create-index!
   "Create an index for a collection.
@@ -329,15 +332,15 @@
   {:arglists '([<collection> <keys> & :collation <collation object> :background? <boolean> :name <string> :filter {} :sparse? <boolean> :unique? <boolean>])}
   [coll keys & options]
   {:pre [coll keys]}
-  (create-index-method (coll/get-collection coll)
+  (create-index-method (get-collection coll)
                        (if (map? keys)
-                         (convert/clj->doc keys)
-                         (convert/list->doc keys))
+                         (clj->doc keys)
+                         (list->doc keys))
                        options))
 
 (defn drop-index! [coll index]
   {:pre [coll index]}
-  (drop-index-method (coll/get-collection coll)
+  (drop-index-method (get-collection coll)
                      index))
 
 ; ------------------------
@@ -346,10 +349,10 @@
 
 (defn- ^:no-doc fetch-docs [coll query options]
   {:pre [coll query]}
-  (-> (fetch-method (coll/get-collection coll)
-                    (convert/clj->doc query)
+  (-> (fetch-method (get-collection coll)
+                    (clj->doc query)
                     options)
-      (convert/it->clj)))
+      (it->clj)))
 
 (defn fetch
   "Fetch documents from collection.
@@ -360,7 +363,7 @@
    | `query`      | `map` A standard MongoDB query. |
    | `:collation` | `optional collation object` Collation used. |
    | `:limit`     | `optional int` Number of documents to fetch. |
-   | `:only`      | `optional map` A MongoDB map of fields to include or exclude. |
+   | `:only`      | `optional map/list` A map/list of fields to include or exclude. |
    | `:skip`      | `optional int` Number of documents to skip before fetching. |
    | `:sort`      | `optional map` A MongoDB map of sorting criteria. |
 
@@ -415,8 +418,8 @@
   ([coll]       (fetch-count coll {}))
   ([coll query]
    {:pre [coll query]}
-   (count-method (coll/get-collection coll)
-                 (convert/clj->doc query))))
+   (count-method (get-collection coll)
+                 (clj->doc query))))
 
 ; ------------------------
 ; Insert
@@ -426,11 +429,11 @@
   {:pre [coll]}
   (catch-return
    (guards/*insert-guard* doc)
-   (let [doc (convert/clj->doc doc)]
-     (-> (coll/get-collection coll)
+   (let [doc (clj->doc doc)]
+     (-> (get-collection coll)
          (insert-options options)
          (insert-method doc))
-     (convert/doc->clj doc))))
+     (doc->clj doc))))
 
 (defn insert!
   "Insert one document or a list thereof in a collection. Inserting a list is atomic.
@@ -501,9 +504,9 @@
   {:pre [coll query]}
   (catch-return
    (guards/*update-guard* update)
-   (let [result (update-method (coll/get-collection coll)
-                               (convert/clj->doc query)
-                               (convert/clj->doc update)
+   (let [result (update-method (get-collection coll)
+                               (clj->doc query)
+                               (clj->doc update)
                                (update-options options))]
      {:matched-count  (.getMatchedCount result)
       :modified-count (.getModifiedCount result)})))
@@ -535,9 +538,9 @@
   {:pre [coll query]}
   (catch-return
    (guards/*update-guard* update)
-   (let [result (update-one-method (coll/get-collection coll)
-                                   (convert/clj->doc query)
-                                   (convert/clj->doc update)
+   (let [result (update-one-method (get-collection coll)
+                                   (clj->doc query)
+                                   (clj->doc update)
                                    (update-options options))]
      {:matched-count  (.getMatchedCount result)
       :modified-count (.getModifiedCount result)})))
@@ -560,11 +563,13 @@
   {:pre [coll query]}
   (catch-return
    (guards/*update-guard* update)
-   (-> (fetch-and-update-method (coll/get-collection coll)
-                                (convert/clj->doc query)
-                                (convert/clj->doc update)
+   (log/spy "1111")
+   (log/spy update)
+   (-> (fetch-and-update-method (get-collection coll)
+                                (log/spy (clj->doc query))
+                                (log/spy (clj->doc update))
                                 (fetch-and-update-options options))
-       (convert/doc->clj))))
+       (doc->clj))))
 
 ; ------------------------
 ; Replace
@@ -591,9 +596,9 @@
   {:pre [coll query]}
   (catch-return
    (guards/*replace-guard* doc)
-   (let [result (replace-method (coll/get-collection coll)
-                                (convert/clj->doc query)
-                                (convert/clj->doc doc)
+   (let [result (replace-method (get-collection coll)
+                                (clj->doc query)
+                                (clj->doc doc)
                                 (replace-options options))]
      {:matched-count  (.getMatchedCount result)
       :modified-count (.getModifiedCount result)})))
@@ -604,11 +609,11 @@
   {:pre [coll query]}
   (catch-return
    (guards/*replace-guard* doc)
-   (-> (fetch-and-replace-method (coll/get-collection coll)
-                                 (convert/clj->doc query)
-                                 (convert/clj->doc doc)
+   (-> (fetch-and-replace-method (get-collection coll)
+                                 (clj->doc query)
+                                 (clj->doc doc)
                                  (fetch-and-replace-options options))
-       (convert/doc->clj))))
+       (doc->clj))))
 
 ; ------------------------
 ; Delete
@@ -630,8 +635,8 @@
   {:arglists '([<collection> <query>])}
   [coll query]
   {:pre [coll query]}
-  (let [result (delete-method (coll/get-collection coll)
-                              (convert/clj->doc query))]
+  (let [result (delete-method (get-collection coll)
+                              (clj->doc query))]
     {:deleted-count (.getDeletedCount result)}))
 
 (defn delete-one!
@@ -650,17 +655,17 @@
   {:arglists '([<collection> <query>])}
   [coll query]
   {:pre [coll query]}
-  (let [result (delete-one-method (coll/get-collection coll)
-                                  (convert/clj->doc query))]
+  (let [result (delete-one-method (get-collection coll)
+                                  (clj->doc query))]
     {:deleted-count (.getDeletedCount result)}))
 
 ; TODO: test
 (defn fetch-and-delete-one!
   [coll query]
   {:pre [query]}
-  (-> (fetch-and-delete-method (coll/get-collection coll)
-                               (convert/clj->doc query))
-      (convert/doc->clj)))
+  (-> (fetch-and-delete-method (get-collection coll)
+                               (clj->doc query))
+      (doc->clj)))
 
 ; ------------------------
 ; Transaction
@@ -716,6 +721,6 @@
   {:arglists '([<collection> & <pipeline>])}
   [coll & pipeline]
   {:pre [coll pipeline]}
-  (-> (aggregate-method (coll/get-collection coll)
-                        (convert/clj->doc pipeline))
-      (convert/it->clj)))
+  (-> (aggregate-method (get-collection coll)
+                        (clj->doc pipeline))
+      (it->clj)))
