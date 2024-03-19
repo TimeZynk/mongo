@@ -4,7 +4,8 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.schema :as s]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu]))
+   [com.timezynk.mongo.test.utils.db-utils :as dbu])
+  (:import [com.mongodb MongoCommandException MongoWriteException]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -21,11 +22,41 @@
              (:email (m/fetch-one :companies {})))))))
 
 (deftest bad-update
-  (testing "Update requires `$set` or `$push`"
-    (is (thrown-with-msg? Exception #"Invalid BSON field"
-                          (m/update! :companies
+  (testing "Update with nil"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"update can not be null"
+                          (m/update! :coll
                                      {}
-                                     {:email "test@test.com"})))))
+                                     nil))))
+  (testing "Update with empty list"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/update! :coll
+                                     {}
+                                     [])))
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/update! :coll
+                                     {}
+                                     '()))))
+  (testing "Update requires valid modifier"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"not a valid modifier: :email"
+                          (m/update! :coll
+                                     {}
+                                     {:email "test@test.com"}))))
+  (testing "Update with null value"
+    (is (thrown-with-msg? MongoWriteException
+                          #"Modifiers operate on fields but we found type null instead"
+                          (m/update! :coll
+                                     {}
+                                     {:$set nil}))))
+  (testing "Pipeline with wrong stage"
+    (is (thrown-with-msg? MongoCommandException
+                          #"Unrecognized pipeline stage name"
+                          (m/update! :coll
+                                     {}
+                                     [{:$push {:b 1}}])))))
 
 (deftest upsert
   (testing "Upsert creates a document"

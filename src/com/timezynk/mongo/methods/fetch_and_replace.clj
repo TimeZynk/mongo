@@ -4,7 +4,7 @@
   (:import [org.bson Document]
            [com.mongodb.client.model FindOneAndReplaceOptions ReturnDocument]))
 
-(defn- create-options ^FindOneAndReplaceOptions [{:keys [return-new? upsert?]}]
+(defn fetch-and-replace-options ^FindOneAndReplaceOptions [{:keys [return-new? upsert?]}]
   (cond-> (FindOneAndReplaceOptions.)
     return-new?
     (.returnDocument ReturnDocument/AFTER)
@@ -16,7 +16,7 @@
     {:session (some? *mongo-session*)}))
 
 (defmethod fetch-and-replace-method {:session true} [coll query doc options]
-  (.findOneAndReplace coll *mongo-session* query doc (create-options options)))
+  (.findOneAndReplace coll *mongo-session* query doc options))
 
 (defmethod fetch-and-replace-method {:session false} [coll query doc options]
-  (.findOneAndReplace coll query doc (create-options options)))
+  (.findOneAndReplace coll query doc options))
