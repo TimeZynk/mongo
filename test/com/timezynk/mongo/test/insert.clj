@@ -11,6 +11,31 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
+(deftest insert-empty
+  (testing "Inserting nil value just returns nil"
+    (let [res (m/insert-one! :coll nil)]
+      (is (nil? res))))
+  (testing "Inserting empty list just returns empty list"
+    (let [res (m/insert! :coll [])]
+      (is (= [] res)))
+    (let [res (m/insert! :coll '())]
+      (is (= [] res)))
+    (let [res (m/insert-one! :coll [])]
+      (is (= [] res)))
+    (let [res (m/insert-one! :coll '())]
+      (is (= [] res))))
+  (is (= 0 (m/fetch-count :coll))))
+
+(deftest bad-insert
+  (testing "Inserting nil value throws exception"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"document can not be null"
+                          (m/insert! :coll nil))))
+  (testing "Inserting illegal doc throws exception"
+    (is (thrown-with-msg? ClassCastException
+                          #"class java.lang.Long cannot be cast to class org.bson.Document"
+                          (m/insert! :coll 1)))))
+
 (deftest insert
   (let [res (m/insert! :users {:name "Name"})]
     (is (= ObjectId
