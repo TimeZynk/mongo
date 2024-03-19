@@ -20,8 +20,26 @@
                           [:name :username]))))))
 
 (deftest bad-replace
+  (testing "Replace with nil"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"replacement can not be null"
+                          (m/replace-one! :coll
+                                          {}
+                                          nil))))
+  (testing "Replace with empty list"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/replace-one! :coll
+                                          {}
+                                          [])))
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          (m/replace-one! :coll
+                                          {}
+                                          '()))))
   (testing "Using $set, as in an update, should not work"
-    (is (thrown-with-msg? Exception #"Invalid BSON field"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Invalid BSON field"
                           (m/replace-one! :companies
                                           {}
                                           {:$set {:email "test@test.com"}})))))

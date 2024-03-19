@@ -4,7 +4,8 @@
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.schema :as s]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
-  (:import [org.bson.types ObjectId]))
+  (:import [com.mongodb MongoWriteException]
+           [org.bson.types ObjectId]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -32,10 +33,10 @@
       (catch Exception _e
         (is false))))
   (testing "Inserts that don't pass validation"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:address "Address"})))
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:name 1})))))
 
@@ -47,7 +48,7 @@
       (catch Exception _e
         (is false))))
   (testing "Insert invalid id"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:id "A"})))))
 
@@ -61,15 +62,15 @@
       (catch Exception _e
         (is false))))
   (testing "Insert not string"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-1 {:field 1}))))
   (testing "Fail regex"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-1 {:field "s"}))))
   (testing "Fail enum"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-2 {:field "B"})))))
 
@@ -81,7 +82,7 @@
       (catch Exception _e
         (is false))))
   (testing "Insert not number"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:number "1"})))))
 
@@ -93,7 +94,7 @@
       (catch Exception _e
         (is false))))
   (testing "Insert not integer"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:integer 1.2})))))
 
@@ -105,7 +106,7 @@
       (catch Exception _e
         (is false))))
   (testing "Insert not boolean"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:boolean 1})))))
 
@@ -117,7 +118,7 @@
       (catch Exception _e
         (is false))))
   (testing "Insert not date-time"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:date "2020-01-01T10:00:00.000"})))))
 
@@ -130,7 +131,7 @@
       (catch Exception _e
         (is false))))
   (testing "Insert not map"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:map {:first "A"}})))))
 
@@ -147,22 +148,22 @@
       (catch Exception _e
         (is false))))
   (testing "Array insert fail"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-1 {:array [{:first "A"}]})))
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-2 {:array [1]})))
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-2 {:array ["ABCD"]})))
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-3 {:array []})))
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-3 {:array [1 1]})))
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :coll-3 {:array [1 2 3]})))))
 
@@ -185,6 +186,6 @@
       (catch Exception _e
         (is false))))
   (testing "Invalid name"
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:name "B"})))))

@@ -2,7 +2,7 @@
   (:require
   ;;  [clojure.tools.logging :as log]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.utils.convert :as convert])
+   [com.timezynk.mongo.convert-types :refer [clj->doc]])
   (:import [com.mongodb.client.model IndexOptions]))
 
 (defn- create-options ^IndexOptions
@@ -11,7 +11,7 @@
     collation   (.collation collation)
     background? (.background background?)
     name        (.name name)
-    filter      (.partialFilterExpression (convert/clj->doc filter))
+    filter      (.partialFilterExpression (clj->doc filter))
     sparse?     (.sparse sparse?)
     unique?     (.unique unique?)))
 

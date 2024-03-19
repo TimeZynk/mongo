@@ -1,7 +1,7 @@
 (ns ^:no-doc com.timezynk.mongo.methods.fetch
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.utils.convert :as convert])
+   [com.timezynk.mongo.convert-types :refer [clj->doc list->doc]])
   (:import [org.bson Document]))
 
 (defn- with-options [result {:keys [collation limit only skip sort]}]
@@ -9,10 +9,10 @@
     collation (.collation collation)
     limit     (.limit limit)
     only      (.projection (if (map? only)
-                             (convert/clj->doc only)
-                             (convert/list->doc only)))
+                             (clj->doc only)
+                             (list->doc only)))
     skip      (.skip skip)
-    sort      (.sort (convert/clj->doc sort))))
+    sort      (.sort (clj->doc sort))))
 
 (defmulti fetch-method ^Document
   (fn [_coll _query options]

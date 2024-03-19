@@ -15,8 +15,6 @@ When creating a collection, an optional schema can be added:
                                       :reg-no (s/string :optional? true :regex "[A-Z]{3}\\d{3}")})
 ```
 
-BEWARE! The schema can only be added on creation and cannot be altered afterwards.
-
 In the example above, the collection `:user` gets a schema, stating that documents must have &ndash; and only have &ndash; the following fields:
 
 * `:name` This field is required and must be a string.
