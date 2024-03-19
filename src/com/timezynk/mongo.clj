@@ -420,15 +420,15 @@
 ; Insert
 ; ------------------------
 
-(defn- ^:no-doc insert-docs [coll doc options]
+(defn- ^:no-doc insert-docs [coll docs options]
   {:pre [coll]}
-  (if (= [] doc) ; the empty list should not throw exception
-    doc
-    (let [doc (convert/clj->doc doc)]
+  (if (= [] docs) ; the empty list should not throw exception
+    docs
+    (let [docs (convert/clj->doc docs)]
       (-> (coll/get-collection coll)
           (insert-options options)
-          (insert-method doc))
-      (convert/doc->clj doc))))
+          (insert-method docs))
+      (convert/doc->clj docs))))
 
 (defn insert!
   "Insert one document or a list thereof in a collection. Inserting a list is atomic.
@@ -459,8 +459,8 @@
    ```"
   {:arglists '([<collection> <document> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]]
                [<collection> <document-list> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
-  [coll doc & options]
-  (insert-docs coll doc options))
+  [coll docs & options]
+  (insert-docs coll docs options))
 
 (defn insert-one!
   "This is identical to `insert!`, except if payload is nil, return nil instead of throwing exception. Use this function when
