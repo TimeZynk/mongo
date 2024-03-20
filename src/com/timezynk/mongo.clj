@@ -6,7 +6,8 @@
   (:require
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-database* *mongo-session*]]
    [com.timezynk.mongo.convert-types :refer [clj->doc doc->clj it->clj list->doc]]
-   [com.timezynk.mongo.guards :refer [*insert-guard* *update-guard* *replace-guard* catch-return]]
+   [com.timezynk.mongo.guards :refer [*replace-guard* catch-return]]
+   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
@@ -16,18 +17,14 @@
    [com.timezynk.mongo.methods.delete :refer [delete-method delete-one-method]]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
-   [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
    [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method]]
    [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method fetch-and-replace-options]]
-   [com.timezynk.mongo.methods.fetch-and-update :refer [fetch-and-update-method fetch-and-update-options]]
-   [com.timezynk.mongo.methods.insert :refer [insert-method insert-options]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection]]
-   [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]]
-   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options]])
+   [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]])
   (:import [com.mongodb MongoClientSettings]
-           [com.mongodb.client ClientSession MongoCollection TransactionBody]
+           [com.mongodb.client ClientSession TransactionBody]
            [com.mongodb.client.model Collation]))
 
 ; ------------------------
@@ -196,10 +193,6 @@
 ; Collection
 ; ------------------------
 
-(defn ^:no-doc get-collection ^MongoCollection [coll]
-  (.getCollection *mongo-database*
-                  (name coll)))
-
 (defn list-collections
   "List full info of all collections in database."
   []
@@ -284,18 +277,18 @@
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
   {:pre [coll]}
-  (modify-collection (get-collection coll) options))
+  (modify-collection (h/get-collection coll) options))
 
 (defn drop-collection! [coll]
   {:pre [coll]}
-  (drop-collection-method (get-collection coll)))
+  (drop-collection-method (h/get-collection coll)))
 
 ; ------------------------
 ; Index
 ; ------------------------
 
 (defn list-indexes [coll]
-  (-> (.listIndexes (get-collection coll))
+  (-> (.listIndexes (h/get-collection coll))
       (it->clj)))
 
 (defn create-index!
@@ -331,7 +324,7 @@
   {:arglists '([<collection> <keys> & :collation <collation object> :background? <boolean> :name <string> :filter {} :sparse? <boolean> :unique? <boolean>])}
   [coll keys & options]
   {:pre [coll keys]}
-  (create-index-method (get-collection coll)
+  (create-index-method (h/get-collection coll)
                        (if (map? keys)
                          (clj->doc keys)
                          (list->doc keys))
@@ -339,19 +332,12 @@
 
 (defn drop-index! [coll index]
   {:pre [coll index]}
-  (drop-index-method (get-collection coll)
+  (drop-index-method (h/get-collection coll)
                      index))
 
 ; ------------------------
 ; Fetch
 ; ------------------------
-
-(defn- ^:no-doc fetch-docs [coll query options]
-  {:pre [coll query]}
-  (-> (fetch-method (get-collection coll)
-                    (clj->doc query)
-                    options)
-      (it->clj)))
 
 (defn fetch
   "Fetch documents from collection.
@@ -379,7 +365,7 @@
   {:arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
   ([coll]                 (fetch coll {}))
-  ([coll query & options] (fetch-docs coll query options)))
+  ([coll query & options] (h/do-fetch coll query options)))
 
 (defn fetch-one
   "Return only the first document retrieved.
@@ -399,7 +385,7 @@
   {:arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :only {} :skip <count> :sort {}])}
   ([coll]                 (fetch-one coll {}))
-  ([coll query & options] (-> (fetch-docs coll query (concat options [:limit 1]))
+  ([coll query & options] (-> (h/do-fetch coll query (concat options [:limit 1]))
                               (first))))
 
 (defn fetch-count
@@ -417,22 +403,12 @@
   ([coll]       (fetch-count coll {}))
   ([coll query]
    {:pre [coll query]}
-   (count-method (get-collection coll)
+   (count-method (h/get-collection coll)
                  (clj->doc query))))
 
 ; ------------------------
 ; Insert
 ; ------------------------
-
-(defn- ^:no-doc insert-docs [coll docs options]
-  {:pre [coll]}
-  (catch-return
-   (*insert-guard* docs)
-   (let [docs (clj->doc docs)]
-     (-> (get-collection coll)
-         (insert-options options)
-         (insert-method docs))
-     (doc->clj docs))))
 
 (defn insert!
   "Insert one document or a list thereof in a collection. Inserting a list is atomic.
@@ -464,14 +440,14 @@
   {:arglists '([<collection> <document> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]]
                [<collection> <document-list> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
   [coll docs & options]
-  (insert-docs coll docs options))
+  (h/do-insert coll docs options))
 
 (defn insert-one!
   "This is identical to `insert!`, except if payload is nil, return nil instead of throwing exception. Use this function when
    the payload is expected to be a nil-able document."
   [coll doc & options]
   (when doc
-    (insert-docs coll doc options)))
+    (h/do-insert coll doc options)))
 
 ; ------------------------
 ; Update
@@ -501,15 +477,22 @@
    ```"
   {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
   [coll query update & options]
-  {:pre [coll query]}
-  (catch-return
-   (*update-guard* update)
-   (let [result (update-method (get-collection coll)
-                               (clj->doc query)
-                               (clj->doc update)
-                               (update-options options))]
-     {:matched-count  (.getMatchedCount result)
-      :modified-count (.getModifiedCount result)})))
+  (h/do-update coll query update options))
+
+(defn set!
+  "Shorthand for `update!` with a single `:$set` modifier.
+   
+   **Examples**
+  
+  ```Clojure
+  (set! :coll {} {:a 1})
+  ```
+  translates to: 
+  ```Clojure
+  (update! :coll {} {:$set {:a 1}})
+  ```"
+  [coll query update & options]
+  (h/do-update coll query {:$set update} options))
 
 (defn update-one!
   "Update first matching document.
@@ -535,15 +518,22 @@
    ```"
   {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
   [coll query update & options]
-  {:pre [coll query]}
-  (catch-return
-   (*update-guard* update)
-   (let [result (update-one-method (get-collection coll)
-                                   (clj->doc query)
-                                   (clj->doc update)
-                                   (update-options options))]
-     {:matched-count  (.getMatchedCount result)
-      :modified-count (.getModifiedCount result)})))
+  (h/do-update-one coll query update options))
+
+(defn set-one!
+  "Shorthand for `update-one!` with a single `:$set` modifier.
+   
+   **Examples**
+  
+  ```Clojure
+  (set-one! :coll {} {:a 1})
+  ```
+  translates to: 
+  ```Clojure
+  (update-one! :coll {} {:$set {:a 1}})
+  ```"
+  [coll query update & options]
+  (h/do-update-one coll query {:$set update} options))
 
 (defn fetch-and-update-one!
   "Update first matching document.
@@ -560,14 +550,22 @@
    A single document or nil."
   {:arglists '([<collection> <query> & :return-new? <boolean> :upsert? <boolean>])}
   [coll query update & options]
-  {:pre [coll query]}
-  (catch-return
-   (*update-guard* update)
-   (-> (fetch-and-update-method (get-collection coll)
-                                (clj->doc query)
-                                (clj->doc update)
-                                (fetch-and-update-options options))
-       (doc->clj))))
+  (h/do-fetch-and-update-one coll query update options))
+
+(defn fetch-and-set-one!
+  "Shorthand for `fetch-and-update-one!` with a single `:$set` modifier.
+   
+   **Examples**
+  
+  ```Clojure
+  (fetch-and-set-one! :coll {} {:a 1})
+  ```
+  translates to: 
+  ```Clojure
+  (fetch-and-update-one! :coll {} {:$set {:a 1}})
+  ```"
+  [coll query update & options]
+  (h/do-fetch-and-update-one coll query {:$set update} options))
 
 ; ------------------------
 ; Replace
@@ -594,7 +592,7 @@
   {:pre [coll query]}
   (catch-return
    (*replace-guard* doc)
-   (let [result (replace-method (get-collection coll)
+   (let [result (replace-method (h/get-collection coll)
                                 (clj->doc query)
                                 (clj->doc doc)
                                 (replace-options options))]
@@ -607,7 +605,7 @@
   {:pre [coll query]}
   (catch-return
    (*replace-guard* doc)
-   (-> (fetch-and-replace-method (get-collection coll)
+   (-> (fetch-and-replace-method (h/get-collection coll)
                                  (clj->doc query)
                                  (clj->doc doc)
                                  (fetch-and-replace-options options))
@@ -633,7 +631,7 @@
   {:arglists '([<collection> <query>])}
   [coll query]
   {:pre [coll query]}
-  (let [result (delete-method (get-collection coll)
+  (let [result (delete-method (h/get-collection coll)
                               (clj->doc query))]
     {:deleted-count (.getDeletedCount result)}))
 
@@ -653,7 +651,7 @@
   {:arglists '([<collection> <query>])}
   [coll query]
   {:pre [coll query]}
-  (let [result (delete-one-method (get-collection coll)
+  (let [result (delete-one-method (h/get-collection coll)
                                   (clj->doc query))]
     {:deleted-count (.getDeletedCount result)}))
 
@@ -661,7 +659,7 @@
 (defn fetch-and-delete-one!
   [coll query]
   {:pre [query]}
-  (-> (fetch-and-delete-method (get-collection coll)
+  (-> (fetch-and-delete-method (h/get-collection coll)
                                (clj->doc query))
       (doc->clj)))
 
@@ -719,6 +717,6 @@
   {:arglists '([<collection> & <pipeline>])}
   [coll & pipeline]
   {:pre [coll pipeline]}
-  (-> (aggregate-method (get-collection coll)
+  (-> (aggregate-method (h/get-collection coll)
                         (clj->doc pipeline))
       (it->clj)))

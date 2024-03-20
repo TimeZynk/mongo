@@ -2,7 +2,7 @@
   (:require
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]
-   [com.timezynk.mongo :refer [get-collection]]
+   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
    [com.timezynk.mongo.convert-types :refer [clj->doc doc->clj]])
   (:import [com.mongodb.client MongoCollection MongoCursor MongoIterable]
@@ -22,7 +22,7 @@
   (.watch coll [(clj->doc {:$match {:operationType op-type}})]))
 
 (defn- get-cursor [coll op-type]
-  (-> ^MongoCollection (get-collection coll)
+  (-> ^MongoCollection (h/get-collection coll)
       ^MongoIterable (watch-method op-type)
       ^MongoCursor (.iterator)))
 
