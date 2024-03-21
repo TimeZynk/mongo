@@ -98,6 +98,18 @@
                           #"Document failed validation"
                           (m/insert! :users {:integer 1.2})))))
 
+(deftest timestamp-schema
+  (m/create-collection! :users :schema {:timestamp (s/timestamp)})
+  (testing "Insert timestamp"
+    (try
+      (m/insert! :users {:timestamp 10000})
+      (catch Exception _e
+        (is false))))
+  (testing "Insert not timestamp"
+    (is (thrown-with-msg? MongoWriteException
+                          #"Document failed validation"
+                          (m/insert! :users {:timestamp -1})))))
+
 (deftest boolean-schema
   (m/create-collection! :users :schema {:boolean (s/boolean)})
   (testing "Insert boolean"

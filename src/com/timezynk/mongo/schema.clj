@@ -2,15 +2,16 @@
   "Functions for defining a collection schema."
   (:refer-clojure :exclude [boolean map]))
 
-(def ^:no-doc ^:const ID       "objectId")
-(def ^:no-doc ^:const STRING   "string")
-(def ^:no-doc ^:const NUMBER   "double")
-(def ^:no-doc ^:const INTEGER  "long")
-(def ^:no-doc ^:const BOOLEAN  "bool")
-(def ^:no-doc ^:const DATETIME "date")
-(def ^:no-doc ^:const MAP      "object")
-(def ^:no-doc ^:const ARRAY    "array")
-(def ^:no-doc ^:const TYPES [ID STRING NUMBER INTEGER BOOLEAN DATETIME MAP ARRAY])
+(def ^:no-doc ^:const ARRAY     "array")
+(def ^:no-doc ^:const BOOLEAN   "bool")
+(def ^:no-doc ^:const DATETIME  "date")
+(def ^:no-doc ^:const ID        "objectId")
+(def ^:no-doc ^:const INTEGER   "long")
+(def ^:no-doc ^:const MAP       "object")
+(def ^:no-doc ^:const NUMBER    "double")
+(def ^:no-doc ^:const STRING    "string")
+(def ^:no-doc ^:const TIMESTAMP "long")
+(def ^:no-doc ^:const TYPES [ARRAY BOOLEAN DATETIME ID INTEGER MAP NUMBER STRING TIMESTAMP])
 
 (defn- ^:no-doc set-required [{:keys [optional?]}]
   {:optional optional?})
@@ -151,6 +152,25 @@
          (set-enum options)
          (set-min options)
          (set-max options)))
+
+(defn timestamp
+  "Field must be a `timestamp`.
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `:optional?` | `optional boolean` Is the field optional? |
+
+   **Examples**
+   
+   ```Clojure
+   ; field-1 must be an integer and must be included:
+   (create-collection! :coll :schema {:field-1 (timestamp)})
+   ```"
+  {:arglists '([& :optional? <boolean>])}
+  [& options]
+  (merge {:bsonType TIMESTAMP}
+         (set-required options)
+         (set-min {:min 0})))
 
 (defn boolean
   "Field must be a `boolean`.
