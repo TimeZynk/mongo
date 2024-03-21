@@ -42,7 +42,6 @@
   Document
   (doc->clj [v]
     (->> (.entrySet v)
-         (.toArray)
          (r/map (fn [x]
                   [(keyword (.getKey x))
                    (doc->clj (.getValue x))]))

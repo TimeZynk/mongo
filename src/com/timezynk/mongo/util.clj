@@ -1,9 +1,12 @@
 (ns com.timezynk.mongo.util
   (:require
    [clojure.tools.logging :as log]
+   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
+   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method]]
+   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection]]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-database*]])
-  (:import [com.mongodb MongoClientException]))
+  (:import [com.mongodb MongoClientException MongoCommandException]))
 
 ; ------------------------
 ; Persistent binding
@@ -67,17 +70,11 @@
        ~@body)))
 
 ; ------------------------
-; Convenience
+; Collections
 ; ------------------------
 
-(defmacro swallow
-  "Any exception in body gets eaten and macro returns `nil`.
-
-   **Returns**
-
-   Normal execution: The result of the last encapsulated expression.
-   Exception: `nil`."
-  [& body]
+(defn make-collection! [coll & options]
   (try
-    ~@body
-    (catch Exception _e#)))
+    (create-collection-method (name coll) options)
+    (catch MongoCommandException _e
+      (modify-collection (h/get-collection coll) options))))

@@ -2,7 +2,10 @@
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu]))
+   [com.timezynk.mongo.schema :as s]
+   [com.timezynk.mongo.util :as u]
+   [com.timezynk.mongo.test.utils.db-utils :as dbu])
+  (:import [com.mongodb MongoCommandException]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -34,3 +37,13 @@
   (is (= 0 (m/fetch-count :coll {:name ".12 "})))
   (is (= 1 (-> (m/fetch :coll {:name ".12 "} :collation (m/collation "se" :alternate :shifted))
                count))))
+
+(deftest double-create
+  (m/create-collection! :coll :schema {:name (s/string)})
+  (is (thrown-with-msg? MongoCommandException
+                        #"Collection already exists"
+                        (m/create-collection! :coll)))
+  (u/make-collection! :coll :schema {:c (s/integer)})
+  (is (= "long"
+         (get-in (m/collection-info :coll)
+                 [:options :validator :$jsonSchema :properties :c :bsonType]))))

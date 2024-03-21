@@ -2,8 +2,7 @@
   (:require
    [clojure.test :refer [deftest is use-fixtures]]
    [com.timezynk.mongo :as m]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu]
-   [com.timezynk.mongo.util :refer [swallow]]))
+   [com.timezynk.mongo.test.utils.db-utils :as dbu]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -20,8 +19,6 @@
               (into #{})))))
 
 (deftest shorthand
-  (swallow
-   (m/drop-collection! :coll))
   (m/insert! :coll
              [{:name "1"}
               {:name "2" :username "2"}])
@@ -33,8 +30,6 @@
               (into #{})))))
 
 (deftest partial-filter
-  (swallow
-   (m/drop-collection! :coll))
   (m/insert! :coll
              [{:name "1" :flag-index true}
               {:name "2" :flag-index false}])

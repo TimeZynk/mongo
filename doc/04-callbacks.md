@@ -28,7 +28,7 @@ For example, MongoDB uses java.util.Date for storing date-time values.
   java.util.Date
   (doc->clj [v]
     (-> (.getTime v)
-        (java.time.Instant/ofEpochMilli)
+        java.time.Instant/ofEpochMilli
         (.atZone java.time.ZoneId/systemDefault))))
 
 
