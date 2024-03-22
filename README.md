@@ -2,6 +2,32 @@
 
 A Clojure wrapper for the [modern MongoDB Java driver](https://mongodb.github.io/mongo-java-driver/4.5/apidocs/mongodb-driver-sync/com/mongodb/client/package-summary.html).
 
+## Releases and Dependency Information
+
+### Leiningen/Boot
+
+    [com.timezynk/mongo "0.9.4"]
+
+### Clojure CLI/deps.edn
+
+    com.timezynk/mongo {:mvn/version "0.9.4"}
+
+### Gradle
+
+    implementation("com.timezynk:mongo:0.9.4")
+
+### Maven
+
+    <dependency>
+      <groupId>com.timezynk</groupId>
+      <artifactId>mongo</artifactId>
+      <version>0.9.4</version>
+    </dependency>
+
+## API
+
+[cljdoc.org](https://cljdoc.org/d/com.timezynk/mongo/0.9.4/api/com.timezynk.mongo)
+
 ## Testing
 
 You need MongoDB version 4.4 or later installed.
