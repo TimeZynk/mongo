@@ -11,10 +11,8 @@
       (log/warn e "Failed to remove collections"))))
 
 (defn test-case-db-fixture [f]
-  (try
-    (f)
-    (finally
-      (clear-db))))
+  (clear-db)
+  (f))
 
 (defn test-suite-db-fixture [f]
   (m/with-mongo "mongodb://127.0.0.1:27017/test"

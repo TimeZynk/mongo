@@ -12,16 +12,16 @@
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
    [com.timezynk.mongo.methods.count :refer [count-method]]
-   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method]]
+   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
    [com.timezynk.mongo.methods.create-index :refer [create-index-method]]
    [com.timezynk.mongo.methods.delete :refer [delete-method delete-one-method]]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
    [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method]]
    [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method fetch-and-replace-options]]
-   [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
+   [com.timezynk.mongo.methods.list-collections :refer [list-collections-method list-collection-names-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
-   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection]]
+   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
    [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]])
   (:import [com.mongodb MongoClientSettings]
            [com.mongodb.client ClientSession TransactionBody]
@@ -202,8 +202,8 @@
 (defn list-collection-names
   "List keyworded names of all collections in database."
   []
-  (->> (list-collections)
-       (map :name)
+  (->> (list-collection-names-method *mongo-database*)
+       (it->clj)
        (map keyword)))
 
 (defn collection-info
@@ -248,7 +248,7 @@
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
   {:pre [coll]}
-  (create-collection-method (name coll) options))
+  (create-collection-method (name coll) (collection-options options)))
 
 (defn modify-collection!
   "Make updates to a collection.
@@ -264,6 +264,7 @@
    |               | `:strict` Apply validation rules to all inserts and all updates. Default value. |
    |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents. |
    |               | `:off` No validation for inserts or updates. |
+   | `:validate?`  | `optional boolean` Ensure that existing documents in the collection conform to the new schema or validation. Default `false`. |
    
    **Returns**
    
@@ -277,7 +278,7 @@
   {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
   [coll & options]
   {:pre [coll]}
-  (modify-collection (h/get-collection coll) options))
+  (modify-collection-method coll options))
 
 (defn drop-collection! [coll]
   {:pre [coll]}

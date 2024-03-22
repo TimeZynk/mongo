@@ -51,7 +51,7 @@
                            :address {:street "Main street"
                                      :number 12345
                                      :id (ObjectId.)}})
-    (let [{:keys [_id name address]} (m/fetch-one :companies {})
+    (let [{:keys [_id name address]} (m/fetch-one :companies)
           {:keys [street number id]} address]
       (is (= ObjectId (type _id)))
       (is (= "Name" name))
@@ -75,11 +75,11 @@
       (write-thread-1 latch-1 latch-2 latch-3))
     (testing "Make one insert in the transaction"
       (is true? (.await latch-1 5 (TimeUnit/SECONDS)))
-      (is (= 0 (count (m/fetch :companies {})))))
+      (is (= 0 (count (m/fetch :companies)))))
     (.countDown latch-2)
     (testing "Make next insert and end transaction"
       (is true? (.await latch-3 5 (TimeUnit/SECONDS)))
-      (is (= 2 (count (m/fetch :companies {})))))))
+      (is (= 2 (count (m/fetch :companies)))))))
 
 (deftest abort-transaction
   (testing "Aborted transaction makes no inserts"

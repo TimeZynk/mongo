@@ -1,6 +1,7 @@
 (ns com.timezynk.mongo.schema
   "Functions for defining a collection schema."
-  (:refer-clojure :exclude [boolean map]))
+  (:refer-clojure :exclude [boolean map])
+  (:require [clojure.core.reducers :as r]))
 
 (def ^:no-doc ^:const ARRAY     "array")
 (def ^:no-doc ^:const BOOLEAN   "bool")
@@ -11,7 +12,8 @@
 (def ^:no-doc ^:const NUMBER    "double")
 (def ^:no-doc ^:const STRING    "string")
 (def ^:no-doc ^:const TIMESTAMP "long")
-(def ^:no-doc ^:const TYPES [ARRAY BOOLEAN DATETIME ID INTEGER MAP NUMBER STRING TIMESTAMP])
+; timestamp excluded, same as integer:
+(def ^:no-doc ^:const TYPES [ARRAY BOOLEAN DATETIME ID INTEGER MAP NUMBER STRING])
 
 (defn- ^:no-doc set-required [{:keys [optional?]}]
   {:optional optional?})
@@ -41,10 +43,12 @@
     {:maximum max}))
 
 (defn- ^:no-doc convert-schema* [schema]
-  (let [properties (->> (clojure.core/map (fn [[k v]] [k (dissoc v :optional)]) schema)
+  (let [properties (->> (r/map (fn [[k v]] [k (dissoc v :optional)]) schema)
                         (into {}))
-        required (->> (filter (fn [[_k v]] (not (:optional v))) schema)
-                      (clojure.core/map (fn [[k _v]] (name k))))]
+        required (->> schema
+                      (filter (fn [[_k v]]
+                                (not (:optional v))))
+                      (mapv (fn [[k _v]] (name k))))]
     (merge {:bsonType MAP
             :properties properties
             :additionalProperties false}
@@ -52,13 +56,15 @@
              {:required required}))))
 
 (defn ^:no-doc convert-schema [schema]
-  (let [{:keys [required properties]} (convert-schema* schema)]
-    {:$jsonSchema (merge {:bsonType MAP
-                          :properties (merge {:_id {:bsonType ID}}
-                                             properties)
-                          :additionalProperties false}
-                         (when required
-                           {:required required}))}))
+  (if (contains? #{nil {}} schema)
+    schema
+    (let [{:keys [required properties]} (convert-schema* schema)]
+      {:$jsonSchema (merge {:bsonType MAP
+                            :properties (merge {:_id {:bsonType ID}}
+                                               properties)
+                            :additionalProperties false}
+                           (when required
+                             {:required required}))})))
 
 (defn id
   "Field must be an `ObjectId`.
@@ -257,7 +263,7 @@
            {:uniqueItems unique?})))
 
 (defn any
-    "Field can be of any type.
+  "Field can be of any type.
    
    | Parameter     | Description |
    | ---           | --- |

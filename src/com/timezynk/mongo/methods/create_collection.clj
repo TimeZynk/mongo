@@ -6,34 +6,24 @@
   (:import
    [com.mongodb.client.model CreateCollectionOptions ValidationAction ValidationLevel ValidationOptions]))
 
-(defn- with-options [{:keys [collation level schema validation]}]
-  (cond-> (CreateCollectionOptions.)
-    collation              (.collation collation)
-    (or schema validation) (.validationOptions
-                            (-> (ValidationOptions.)
-                                (.validator (clj->doc (merge (when schema
-                                                               (convert-schema schema))
-                                                             (when validation
-                                                               validation))))
-                                (.validationLevel (case (or level :strict)
-                                                    :moderate ValidationLevel/MODERATE
-                                                    :off      ValidationLevel/OFF
-                                                    :strict   ValidationLevel/STRICT))
-                                (.validationAction ValidationAction/ERROR)))))
+(defn collection-options [{:keys [collation level schema validation]}]
+  (-> (cond-> (CreateCollectionOptions.)
+        collation (.collation collation))
+      (.validationOptions (-> (ValidationOptions.)
+                              (.validator (clj->doc (merge (convert-schema schema)
+                                                           validation)))
+                              (.validationLevel (case (or level :strict)
+                                                  :moderate ValidationLevel/MODERATE
+                                                  :off      ValidationLevel/OFF
+                                                  :strict   ValidationLevel/STRICT))
+                              (.validationAction ValidationAction/ERROR)))))
 
 (defmulti create-collection-method
-  (fn [_name options]
-    {:session (some? *mongo-session*)
-     :options (seq? options)}))
+  (fn [_name _options]
+    (some? *mongo-session*)))
 
-(defmethod create-collection-method {:session true :options false} [coll _options]
-  (.createCollection *mongo-database* *mongo-session* coll))
+(defmethod create-collection-method true [coll options]
+  (.createCollection *mongo-database* *mongo-session* coll options))
 
-(defmethod create-collection-method {:session true :options true} [coll options]
-  (.createCollection *mongo-database* *mongo-session* coll (with-options options)))
-
-(defmethod create-collection-method {:session false :options false} [coll _options]
-  (.createCollection *mongo-database* coll))
-
-(defmethod create-collection-method {:session false :options true} [coll options]
-  (.createCollection *mongo-database* coll (with-options options)))
+(defmethod create-collection-method false [coll options]
+  (.createCollection *mongo-database* coll options))

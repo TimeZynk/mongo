@@ -7,6 +7,9 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
+(deftest empty-fetch
+  (is (= [] (m/fetch :coll))))
+
 (deftest query
   (m/insert! :companies
              [{:name "1"}

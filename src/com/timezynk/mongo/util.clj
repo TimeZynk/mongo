@@ -1,10 +1,9 @@
 (ns com.timezynk.mongo.util
   (:require
    [clojure.tools.logging :as log]
-   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
-   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method]]
-   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection]]
+   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
+   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-database*]])
   (:import [com.mongodb MongoClientException MongoCommandException]))
 
@@ -75,6 +74,6 @@
 
 (defn make-collection! [coll & options]
   (try
-    (create-collection-method (name coll) options)
+    (create-collection-method (name coll) (collection-options options))
     (catch MongoCommandException _e
-      (modify-collection (h/get-collection coll) options))))
+      (modify-collection-method coll options))))

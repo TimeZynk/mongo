@@ -11,3 +11,13 @@
 
 (defmethod list-collections-method {:session false} [db]
   (.listCollections db))
+
+(defmulti list-collection-names-method
+  (fn [_db]
+    {:session (some? *mongo-session*)}))
+
+(defmethod list-collection-names-method {:session true} [db]
+  (.listCollectionNames db *mongo-session*))
+
+(defmethod list-collection-names-method {:session false} [db]
+  (.listCollectionNames db))
