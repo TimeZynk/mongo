@@ -8,7 +8,7 @@
    [com.timezynk.mongo.hooks :as hooks])
   (:import [clojure.lang Keyword]
            [java.util Collection List Map]
-           [org.bson BsonValue Document]))
+           [org.bson BsonUndefined BsonValue Document]))
 
 (defprotocol ConvertTypes
   (clj->doc [v] "Convert types from Clojure to MongoDB.")
@@ -51,6 +51,10 @@
   BsonValue
   (doc->clj [v]
     (.getValue v))
+
+  BsonUndefined
+  (clj->doc [_] nil)
+  (doc->clj [_] nil)
 
   Object
   (clj->doc [v] v)

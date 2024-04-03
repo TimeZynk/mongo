@@ -5,7 +5,7 @@
   (:import [clojure.lang PersistentArrayMap PersistentVector]
            [java.lang String]
            [java.util ArrayList]
-           [org.bson BsonString Document]))
+           [org.bson BsonString BsonUndefined Document]))
 
 (deftest clj-doc
   (testing "Can convert keyword"
@@ -26,7 +26,10 @@
     (let [doc (clj->doc [{:a 1} {:b 2}])]
       (is (= PersistentVector (type doc)))
       (is (= [{"a" 1} {"b" 2}]
-             doc)))))
+             doc))))
+  (testing "Handle undefined"
+    (is (= {"a" nil}
+           (clj->doc {:a (BsonUndefined.)})))))
 
 (deftest doc-clj
   (testing "Can convert keyword"
@@ -43,4 +46,7 @@
                                       (BsonString. "ABC")]))]
       (is (= PersistentVector (type list)))
       (is (= [{:a 1} "ABC"] list))
-      (is (= [PersistentArrayMap String] (map type list))))))
+      (is (= [PersistentArrayMap String] (map type list)))))
+  (testing "Handle undefined"
+    (is (= {:a nil}
+           (doc->clj (.append (Document.) "a" (BsonUndefined.)))))))
