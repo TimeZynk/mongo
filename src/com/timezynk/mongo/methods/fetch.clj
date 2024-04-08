@@ -12,7 +12,9 @@
                              (clj->doc only)
                              (list->doc only)))
     skip      (.skip skip)
-    sort      (.sort (clj->doc sort))))
+    sort      (.sort (if (map? sort)
+                       (clj->doc sort)
+                       (list->doc sort)))))
 
 (defmulti fetch-method ^Document
   (fn [_coll _query options]
