@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.test.collection-schema
+(ns com.timezynk.mongo.test.schema
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
