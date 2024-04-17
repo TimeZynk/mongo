@@ -3,7 +3,8 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
-  (:import [com.mongodb MongoCommandException]))
+  (:import [com.mongodb MongoCommandException]
+           [org.bson.types ObjectId]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -45,7 +46,8 @@
                                      {}
                                      {:$set {:name "2"}})]
     (is (= "1" (:name res)))
-    (is (= "2" (:name (m/fetch-one :companies))))))
+    (is (= "2" (:name (m/fetch-one :companies))))
+    (is (= 1 (m/fetch-count :companies)))))
 
 (deftest update-and-fetch-new
   (m/insert! :companies {:name "1"})
@@ -53,18 +55,23 @@
                                      {}
                                      {:$set {:name "2"}}
                                      :return-new? true)]
-    (is (= "2" (:name res)))))
+    (is (= "2" (:name res)))
+    (is (= 1 (m/fetch-count :companies)))))
 
 (deftest upsert-and-fetch-old
-  (is (nil? (:name (m/fetch-and-update-one! :companies
-                                            {}
-                                            {:$set {:name "2"}}
-                                            :upsert? true))))
-  (is (= "2" (:name (m/fetch-one :companies)))))
+  (is (nil? (m/fetch-and-update-one! :companies
+                                     {}
+                                     {:$set {:name "2"}}
+                                     :upsert? true)))
+  (is (= "2" (:name (m/fetch-one :companies))))
+  (is (= 1 (m/fetch-count :companies))))
 
 (deftest upsert-and-fetch-new
-  (is (= "2" (:name (m/fetch-and-update-one! :companies
-                                             {}
-                                             {:$set {:name "2"}}
-                                             :upsert? true
-                                             :return-new? true)))))
+  (let [res (m/fetch-and-update-one! :companies
+                                     {}
+                                     {:$set {:name "2"}}
+                                     :upsert? true
+                                     :return-new? true)]
+    (is (= ObjectId (-> res :_id type)))
+    (is (= "2" (:name res)))
+    (is (= 1 (m/fetch-count :companies)))))

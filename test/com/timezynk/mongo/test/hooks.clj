@@ -24,9 +24,9 @@
           res-4 (mh/ignore-hooks
                  (m/fetch-one :coll
                               {:_id (:_id res-1)}))]
-      (testing "Insert response converts both for write and read"
-        (is (= {:key   {:key-3 "key-key-1"}
-                :key-3 "key-1"}
+      (testing "Insert response only adds _id"
+        (is (= {:key   {:key-1 "key-key-1"}
+                :key-1 "key-1"}
                (dissoc res-1 :_id))))
       (testing "Ignore hooks"
         (is (= {:key   {:key-1 "key-key-1"}

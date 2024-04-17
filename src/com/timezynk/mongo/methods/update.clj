@@ -1,7 +1,8 @@
 (ns ^:no-doc com.timezynk.mongo.methods.update
   (:require
+   [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert-types :refer [clj->doc list->doc]])
+   [com.timezynk.mongo.convert :refer [list->map]])
   (:import [com.mongodb.client.model UpdateOptions]
            [com.mongodb.client.result UpdateResult]))
 
@@ -9,9 +10,7 @@
   (cond-> (UpdateOptions.)
     upsert?   (.upsert true)
     collation (.collation collation)
-    hint      (.hint (if (map? hint)
-                       (clj->doc hint)
-                       (list->doc hint)))))
+    hint      (.hint (->bson (list->map hint)))))
 
 (defmulti update-method ^UpdateResult
   (fn [_coll _query _update _options]

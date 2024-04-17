@@ -6,6 +6,7 @@
    [com.timezynk.mongo.schema :as s]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
   (:import [java.util.concurrent CountDownLatch TimeUnit]
+           [org.bson BsonInvalidOperationException]
            [org.bson.types ObjectId]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
@@ -32,8 +33,8 @@
                           #"document can not be null"
                           (m/insert! :coll nil))))
   (testing "Inserting illegal doc throws exception"
-    (is (thrown-with-msg? ClassCastException
-                          #"class java.lang.Long cannot be cast to class org.bson.Document"
+    (is (thrown-with-msg? BsonInvalidOperationException
+                          #"An Int64 value cannot be written to the root level of a BSON document"
                           (m/insert! :coll 1)))))
 
 (deftest insert
@@ -43,7 +44,11 @@
     (is (= "Name" (:name res))))
   (let [res (m/insert! :users [{:name "1"}
                                {:name "2"}])]
-    (is (= 2 (count res)))))
+    (is (= 2 (count res))))
+  (let [res (m/insert! :users '({:name "3"}
+                                {:name "4"}))]
+    (is (= 2 (count res))))
+  (is (= 5 (m/fetch-count :users))))
 
 (deftest insert-recursive
   (testing "Correct conversion of data tructure"

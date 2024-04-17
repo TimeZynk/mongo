@@ -1,7 +1,8 @@
 (ns ^:no-doc com.timezynk.mongo.methods.fetch-and-update
   (:require
+   [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert-types :refer [clj->doc list->doc]])
+   [com.timezynk.mongo.convert :refer [list->map]])
   (:import [org.bson Document]
            [com.mongodb.client.model FindOneAndUpdateOptions ReturnDocument]))
 
@@ -10,22 +11,16 @@
     return-new? (.returnDocument ReturnDocument/AFTER)
     upsert?     (.upsert true)
     collation   (.collation collation)
-    only        (.projection (if (map? only)
-                               (clj->doc only)
-                               (list->doc only)))
-    hint        (.hint (if (map? hint)
-                         (clj->doc hint)
-                         (list->doc hint)))
-    sort        (.sort (if (map? sort)
-                         (clj->doc sort)
-                         (list->doc sort)))))
+    only        (.projection (->bson (list->map only)))
+    hint        (.hint (->bson (list->map hint)))
+    sort        (.sort (->bson (list->map sort)))))
 
 (defmulti fetch-and-update-method ^Document
   (fn [_coll _query _update _options]
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod fetch-and-update-method {:session true} [coll query update options]
+(defmethod fetch-and-update-method true [coll query update options]
   (.findOneAndUpdate coll *mongo-session* query update options))
 
-(defmethod fetch-and-update-method {:session false} [coll query update options]
+(defmethod fetch-and-update-method false [coll query update options]
   (.findOneAndUpdate coll query update options))

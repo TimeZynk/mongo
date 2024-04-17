@@ -7,13 +7,6 @@
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
-(deftest list-dbs
-  (testing "List default databases"
-    (is (= #{"admin" "config" "local"}
-           (->> (m/list-databases)
-                (map :name)
-                (into #{}))))))
-
 (deftest switch-db
   (testing "Switch between databases"
     (m/insert! :users {:name "1"})

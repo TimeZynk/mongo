@@ -4,8 +4,9 @@
           
           Requires MongoDB version 4.4 or later."}
   (:require
-   [com.timezynk.mongo.config :refer [*mongo-client* *mongo-database* *mongo-session*]]
-   [com.timezynk.mongo.convert-types :refer [clj->doc doc->clj it->clj list->doc]]
+   [com.timezynk.mongo.codecs.bson :refer [->bson]]
+   [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database* *mongo-session* *mongo-types*]]
+   [com.timezynk.mongo.convert :refer [it->clj list->map]]
    [com.timezynk.mongo.guards :refer [*replace-guard* catch-return]]
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
@@ -19,11 +20,12 @@
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
    [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method fetch-and-delete-options]]
    [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method fetch-and-replace-options]]
-   [com.timezynk.mongo.methods.list-collections :refer [list-collections-method list-collection-names-method]]
+   [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
    [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]])
-  (:import [com.mongodb MongoClientSettings]
+  (:import [clojure.lang PersistentArrayMap]
+           [com.mongodb MongoClientSettings]
            [com.mongodb.client ClientSession TransactionBody]
            [com.mongodb.client.model Collation]))
 
@@ -74,7 +76,7 @@
    | Parameter    | Description |
    | ---          | --- |
    | `uri`        | `string` Connection string. See the [API documentation](http://mongodb.github.io/mongo-java-driver/4.5/apidocs/mongodb-driver-core/com/mongodb/ConnectionString.html) for more details. |
-   | `connection` | A connection object. |
+   | `connection` | `Connection` A connection object. |
    | `body`       | Encapsulated program utilizing the connection. |
    
    **Returns**
@@ -84,7 +86,7 @@
    **Examples**
 
    ```Clojure
-   (with-mongo \"mongodb://localhost:27017/my-database\" 
+   (with-mongo \"mongodb://localhost:27017/my-database\"
      (insert! :users {:name \"My Name\"})
      (fetch! :users))
    ```"
@@ -96,7 +98,8 @@
                    (connection-method conn# [])
                    conn#)]
      (binding [*mongo-client*   (:client client#)
-               *mongo-database* (:database client#)]
+               *mongo-database* (h/codec-registry (:database client#)
+                                                  *mongo-codecs*)]
        (try
          ~@body
          (finally
@@ -128,7 +131,8 @@
    ```"
   {:arglists '([<database> & <body>])}
   [db & body]
-  `(binding [*mongo-database* (.getDatabase *mongo-client* ~db)]
+  `(binding [*mongo-database* (h/codec-registry (.getDatabase *mongo-client* ~db)
+                                                *mongo-codecs*)]
      ~@body))
 
 (defn list-databases
@@ -140,6 +144,28 @@
   []
   (-> (list-databases-method)
       (it->clj)))
+
+(defmacro with-codecs
+  "Text about codecs.
+   
+   | Parameter   | Description |
+   | ---         | --- |
+   | `bson-type` |  |
+   | `class`     |  |
+   | `codec`     |  |
+   | `body`      | Encapsulated program calling the database. |
+
+   "
+  {:arglists '([<codecs> <bson-type> & <body>])}
+  [codecs bson-types & body]
+  `(let [new-codecs# (concat *mongo-codecs*
+                             ~codecs)
+         new-types#  (merge *mongo-types*
+                            ~bson-types)]
+     (binding [*mongo-database* (h/codec-registry *mongo-database* new-codecs#)
+               *mongo-codecs*   new-codecs#
+               *mongo-types*    new-types#]
+       ~@body)))
 
 ; ------------------------
 ; Collation
@@ -196,14 +222,15 @@
 (defn list-collections
   "List full info of all collections in database."
   []
-  (-> (list-collections-method *mongo-database*)
+  (-> (list-collections-method)
       (it->clj)))
 
 (defn list-collection-names
   "List keyworded names of all collections in database."
   []
-  (->> (list-collection-names-method *mongo-database*)
+  (->> (list-collections-method)
        (it->clj)
+       (map :name)
        (map keyword)))
 
 (defn collection-info
@@ -289,7 +316,7 @@
 ; ------------------------
 
 (defn list-indexes [coll]
-  (-> (.listIndexes (h/get-collection coll))
+  (-> (.listIndexes (h/get-collection coll) PersistentArrayMap)
       (it->clj)))
 
 (defn create-index!
@@ -326,9 +353,7 @@
   [coll keys & options]
   {:pre [coll keys]}
   (create-index-method (h/get-collection coll)
-                       (if (map? keys)
-                         (clj->doc keys)
-                         (list->doc keys))
+                       (->bson (list->map keys))
                        options))
 
 (defn drop-index! [coll index]
@@ -420,8 +445,7 @@
   ([coll]       (fetch-count coll {}))
   ([coll query]
    {:pre [coll query]}
-   (count-method (h/get-collection coll)
-                 (clj->doc query))))
+   (count-method (h/get-collection coll) query)))
 
 ; ------------------------
 ; Insert
@@ -634,8 +658,8 @@
   (catch-return
    (*replace-guard* doc)
    (let [result (replace-method (h/get-collection coll)
-                                (clj->doc query)
-                                (clj->doc doc)
+                                (->bson query)
+                                doc
                                 (replace-options options))]
      {:matched-count  (.getMatchedCount result)
       :modified-count (.getModifiedCount result)
@@ -650,10 +674,9 @@
   (catch-return
    (*replace-guard* doc)
    (-> (fetch-and-replace-method (h/get-collection coll)
-                                 (clj->doc query)
-                                 (clj->doc doc)
-                                 (fetch-and-replace-options options))
-       (doc->clj))))
+                                 (->bson query)
+                                 doc
+                                 (fetch-and-replace-options options)))))
 
 ; ------------------------
 ; Delete
@@ -678,7 +701,7 @@
   [coll query & options]
   {:pre [coll query]}
   (let [result (delete-method (h/get-collection coll)
-                              (clj->doc query)
+                              (->bson query)
                               (delete-options options))]
     {:deleted-count (.getDeletedCount result)
      :acknowledged  (.wasAcknowledged result)}))
@@ -702,7 +725,7 @@
   [coll query & options]
   {:pre [coll query]}
   (let [result (delete-one-method (h/get-collection coll)
-                                  (clj->doc query)
+                                  (->bson query)
                                   (delete-options options))]
     {:deleted-count (.getDeletedCount result)
      :acknowledged  (.wasAcknowledged result)}))
@@ -712,9 +735,8 @@
   [coll query & options]
   {:pre [query]}
   (-> (fetch-and-delete-method (h/get-collection coll)
-                               (clj->doc query)
-                               (fetch-and-delete-options options))
-      (doc->clj)))
+                               (->bson query)
+                               (fetch-and-delete-options options))))
 
 ; ------------------------
 ; Transaction
@@ -771,5 +793,5 @@
   [coll & pipeline]
   {:pre [coll pipeline]}
   (-> (aggregate-method (h/get-collection coll)
-                        (clj->doc pipeline))
+                        (map ->bson pipeline))
       (it->clj)))

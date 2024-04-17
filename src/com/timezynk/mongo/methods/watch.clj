@@ -2,9 +2,9 @@
   (:require
    [clojure.core.async :as async]
    [clojure.tools.logging :as log]
-   [com.timezynk.mongo.helpers :as h]
+   [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert-types :refer [clj->doc doc->clj]])
+   [com.timezynk.mongo.helpers :as h])
   (:import [com.mongodb.client MongoCollection MongoCursor MongoIterable]
            [com.mongodb.client.model.changestream ChangeStreamDocument UpdateDescription]
            [com.mongodb MongoException]
@@ -16,10 +16,10 @@
     {:session (some? *mongo-session*)}))
 
 (defmethod watch-method {:session true} [coll op-type]
-  (.watch coll *mongo-session* [(clj->doc {:$match {:operationType op-type}})]))
+  (.watch coll *mongo-session* (->bson [{:$match {:operationType op-type}}])))
 
 (defmethod watch-method {:session false} [coll op-type]
-  (.watch coll [(clj->doc {:$match {:operationType op-type}})]))
+  (.watch coll (->bson [{:$match {:operationType op-type}}])))
 
 (defn- get-cursor [coll op-type]
   (-> ^MongoCollection (h/get-collection coll)
@@ -34,8 +34,7 @@
 
 (defn- get-id [event]
   (-> ^BsonDocument (.getDocumentKey event)
-      (Document.)
-      (doc->clj)))
+      (Document.)))
 
 (defn- handle-exception [e text]
   (if (= (.getMessage e) "state should be: open")
@@ -49,8 +48,7 @@
         (while (.hasNext cursor)
           (let [event ^ChangeStreamDocument (.next cursor)
                 time  (get-time event)
-                doc   (-> ^Document (.getFullDocument event)
-                          (doc->clj))]
+                doc   (-> ^Document (.getFullDocument event))]
             (insert-fn time doc)))
         (.close cursor)
         (catch MongoException e
@@ -66,8 +64,7 @@
                 id     (get-id event)
                 update (-> ^UpdateDescription (.getUpdateDescription event)
                            ^BsonDocument (.getUpdatedFields)
-                           (Document.)
-                           (doc->clj))]
+                           (Document.))]
             (update-fn time (merge id update))))
         (.close cursor)
         (catch MongoException e

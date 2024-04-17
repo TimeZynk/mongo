@@ -1,10 +1,11 @@
 (ns com.timezynk.mongo.util
   (:require
    [clojure.tools.logging :as log]
+   [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database*]]
+   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
    [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
-   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
-   [com.timezynk.mongo.config :refer [*mongo-client* *mongo-database*]])
+   [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]])
   (:import [com.mongodb MongoClientException MongoCommandException]))
 
 ; ------------------------
@@ -65,7 +66,8 @@
   [& body]
   `(let [client# (upsert-connection)]
      (binding [*mongo-client*   (:client client#)
-               *mongo-database* (:database client#)]
+               *mongo-database* (h/codec-registry (:database client#)
+                                                  *mongo-codecs*)]
        ~@body)))
 
 ; ------------------------
