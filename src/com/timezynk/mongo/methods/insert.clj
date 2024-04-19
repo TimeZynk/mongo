@@ -6,13 +6,13 @@
 (defn insert-options [coll {:keys [write-concern]}]
   (cond-> coll
     write-concern (.withWriteConcern (case write-concern
-                                       :acknowledged   (WriteConcern/ACKNOWLEDGED)
-                                       :unacknowledged (WriteConcern/UNACKNOWLEDGED)
-                                       :journaled      (WriteConcern/JOURNALED)
-                                       :majority       (WriteConcern/MAJORITY)
-                                       :w1             (WriteConcern/W1)
-                                       :w2             (WriteConcern/W2)
-                                       :w3             (WriteConcern/W3)))))
+                                       :acknowledged   WriteConcern/ACKNOWLEDGED
+                                       :unacknowledged WriteConcern/UNACKNOWLEDGED
+                                       :journaled      WriteConcern/JOURNALED
+                                       :majority       WriteConcern/MAJORITY
+                                       :w1             WriteConcern/W1
+                                       :w2             WriteConcern/W2
+                                       :w3             WriteConcern/W3))))
 
 (defmulti insert-method
   (fn [_coll doc]

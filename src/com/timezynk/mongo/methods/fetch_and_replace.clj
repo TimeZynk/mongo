@@ -1,15 +1,24 @@
 (ns ^:no-doc com.timezynk.mongo.methods.fetch-and-replace
   (:require
-   [com.timezynk.mongo.config :refer [*mongo-session*]])
+   [com.timezynk.mongo.config :refer [*mongo-session*]]
+   [com.timezynk.mongo.convert-types :refer [clj->doc list->doc]])
   (:import [org.bson Document]
            [com.mongodb.client.model FindOneAndReplaceOptions ReturnDocument]))
 
-(defn fetch-and-replace-options ^FindOneAndReplaceOptions [{:keys [return-new? upsert?]}]
+(defn fetch-and-replace-options ^FindOneAndReplaceOptions [{:keys [return-new? upsert? collation only hint sort]}]
   (cond-> (FindOneAndReplaceOptions.)
-    return-new?
-    (.returnDocument ReturnDocument/AFTER)
-    upsert?
-    (.upsert true)))
+    return-new? (.returnDocument ReturnDocument/AFTER)
+    upsert?     (.upsert true)
+    collation   (.collation collation)
+    only        (.projection (if (map? only)
+                               (clj->doc only)
+                               (list->doc only)))
+    hint        (.hint (if (map? hint)
+                         (clj->doc hint)
+                         (list->doc hint)))
+    sort        (.sort (if (map? sort)
+                         (clj->doc sort)
+                         (list->doc sort)))))
 
 (defmulti fetch-and-replace-method ^Document
   (fn [_coll _query _doc _options]

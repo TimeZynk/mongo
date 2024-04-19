@@ -11,7 +11,8 @@
   (testing "Create two docs, delete one"
     (m/insert! :companies [{:name "1"}
                            {:name "2"}])
-    (is (= {:deleted-count 1}
+    (is (= {:deleted-count 1
+            :acknowledged true}
            (m/delete-one! :companies {})))
     (is (= 1 (count (m/fetch :companies {}))))))
 
@@ -19,6 +20,7 @@
   (testing "Create two docs, delete both"
     (m/insert! :companies [{:name "1"}
                            {:name "2"}])
-    (is (= {:deleted-count 2}
+    (is (= {:deleted-count 2
+            :acknowledged true}
            (m/delete! :companies {})))
     (is (= 0 (count (m/fetch :companies {}))))))
