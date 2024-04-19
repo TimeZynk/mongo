@@ -11,7 +11,9 @@
   (testing "Create a document, replace it"
     (let [res (m/insert! :companies {:name "1"})]
       (is (= {:matched-count 1
-              :modified-count 1}
+              :modified-count 1
+              :_id nil
+              :acknowledged true}
              (m/replace-one! :companies
                              {:_id (:_id res)}
                              {:username "2"})))
@@ -39,7 +41,7 @@
                                           '()))))
   (testing "Using $set, as in an update, should not work"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"Invalid BSON field"
+                          #"Field names in a replacement document"
                           (m/replace-one! :companies
                                           {}
                                           {:$set {:email "test@test.com"}})))))

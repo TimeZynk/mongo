@@ -14,10 +14,10 @@
    [com.timezynk.mongo.methods.count :refer [count-method]]
    [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
    [com.timezynk.mongo.methods.create-index :refer [create-index-method]]
-   [com.timezynk.mongo.methods.delete :refer [delete-method delete-one-method]]
+   [com.timezynk.mongo.methods.delete :refer [delete-method delete-options delete-one-method]]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
-   [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method]]
+   [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method fetch-and-delete-options]]
    [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method fetch-and-replace-options]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method list-collection-names-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
@@ -389,6 +389,22 @@
   ([coll query & options] (-> (h/do-fetch coll query (concat options [:limit 1]))
                               (first))))
 
+(defn fetch-by-id
+  "Fetch a single document by its id.
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `id`         | `ObjectId/string` The id. A string will be converted to an ObjectId. |
+   | `:only`      | `optional map` A MongoDB map of fields to include or exclude. |
+   
+   **Returns**
+   
+   A single document or `nil`."
+  {:arglists '([<collection> <id> & :only {}])}
+  ([coll id & options] (-> (h/do-fetch coll {:_id (h/->object-id id)} options)
+                           (first))))
+
 (defn fetch-count
   "Count the number of documents returned.
    
@@ -457,12 +473,21 @@
 (defn update!
   "Update matching documents.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `collection` | `keyword/string` The collection. |
-   | `query`      | `map` A standard MongoDB query. |
-   | `update`     | `map` A valid update document. |
-   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   | Parameter        | Description |
+   | ---              | --- |
+   | `collection`     | `keyword/string` The collection. |
+   | `query`          | `map` A standard MongoDB query. |
+   | `update`         | `map` A valid update document. |
+   | `:upsert?`       | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   | `:collation`     | `optional collation object` Collation used. |
+   | `:hint`          | `optional map/list` Indexing hint. |
+   | `:write-concern` | `optional enum` Set write concern: |
+   |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default. |
+   |                  | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. |
+   |                  | `:unacknowledged` Write operations that use this write concern will return as soon as the message is written to the socket. |
+   |                  | `:w1` Write operations that use this write concern will wait for acknowledgement from a single member. |
+   |                  | `:w2` Write operations that use this write concern will wait for acknowledgement from two members. |
+   |                  | `:w3` Write operations that use this write concern will wait for acknowledgement from three members. |
 
    **Returns**
 
@@ -476,7 +501,7 @@
    ```Clojure
    (update!)
    ```"
-  {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
+  {:arglists '([<collection> <query> <update> & :upsert? <boolean> :collation <collation object> :hint {} :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
   [coll query update & options]
   (h/do-update coll query update options))
 
@@ -498,12 +523,21 @@
 (defn update-one!
   "Update first matching document.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `collection` | `keyword/string` The collection. |
-   | `query`      | `map` A standard MongoDB query. |
-   | `update`     | `map` A valid update document. |
-   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   | Parameter        | Description |
+   | ---              | --- |
+   | `collection`     | `keyword/string` The collection. |
+   | `query`          | `map` A standard MongoDB query. |
+   | `update`         | `map/list` A valid update document or pipeline. |
+   | `:upsert?`       | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   | `:collation`     | `optional collation object` Collation used. |
+   | `:hint`          | `optional map/list` Indexing hint. |
+   | `:write-concern` | `optional enum` Set write concern: |
+   |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default. |
+   |                  | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. |
+   |                  | `:unacknowledged` Write operations that use this write concern will return as soon as the message is written to the socket. |
+   |                  | `:w1` Write operations that use this write concern will wait for acknowledgement from a single member. |
+   |                  | `:w2` Write operations that use this write concern will wait for acknowledgement from two members. |
+   |                  | `:w3` Write operations that use this write concern will wait for acknowledgement from three members. |
    
    **Returns**
    
@@ -517,7 +551,7 @@
    ```Clojure
    (update-one!)
    ```"
-  {:arglists '([<collection> <query> <update> & :upsert? <boolean>])}
+  {:arglists '([<collection> <query> <update> & :upsert? <boolean> :collation <collation object> :hint {} :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
   [coll query update & options]
   (h/do-update-one coll query update options))
 
@@ -539,17 +573,21 @@
 (defn fetch-and-update-one!
   "Update first matching document.
    
-   | Parameter     | Description |
-   | ---           | --- |
-   | `collection`  | `keyword/string` The collection. |
-   | `query`       | `map` A standard MongoDB query. |
-   | `return-new?` | `optional boolean` Return the updated document? Default if `false`. |
-   | `:upsert?`    | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   | Parameter      | Description |
+   | ---            | --- |
+   | `collection`   | `keyword/string` The collection. |
+   | `query`        | `map` A standard MongoDB query. |
+   | `:return-new?` | `optional boolean` Return the updated document? Default if `false`. |
+   | `:upsert?`     | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   | `:collation`   | `optional collation object` Collation used. |
+   | `:only`        | `optional map` A MongoDB map of fields to include or exclude. |
+   | `:hint`        | `optional map` Indexing hint. |
+   | `:sort`        | `optional map` A MongoDB map of sorting criteria. |
    
    **Returns**
 
    A single document or nil."
-  {:arglists '([<collection> <query> & :return-new? <boolean> :upsert? <boolean>])}
+  {:arglists '([<collection> <query> & :return-new? <boolean> :upsert? <boolean> :collation <collation object> :only {} :hint {} :sort {}])}
   [coll query update & options]
   (h/do-fetch-and-update-one coll query update options))
 
@@ -581,6 +619,8 @@
    | `query`      | `map` A standard MongoDB query. |
    | `document`   | `map` The new document. |
    | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`. |
+   | `:collation` | `optional collation object` Collation used. |
+   | `:hint`      | `optional map` Indexing hint. |
 
    **Returns**
 
@@ -588,7 +628,7 @@
    {:matched-count <0 or 1>
     :modified-count <0 or 1>}
    ```"
-  {:arglists '([<collection> <query> <document> & :upsert? <boolean>])}
+  {:arglists '([<collection> <query> <document> & :upsert? <boolean> :collation <collation object> :hint {}])}
   [coll query doc & options]
   {:pre [coll query]}
   (catch-return
@@ -598,7 +638,10 @@
                                 (clj->doc doc)
                                 (replace-options options))]
      {:matched-count  (.getMatchedCount result)
-      :modified-count (.getModifiedCount result)})))
+      :modified-count (.getModifiedCount result)
+      :_id            (when-let [v (.getUpsertedId result)]
+                        (.getValue v))
+      :acknowledged   (.wasAcknowledged result)})))
 
 ; TODO: test
 (defn fetch-and-replace-one!
@@ -623,18 +666,22 @@
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
    | `query`      | `map` A standard MongoDB query. |
+   | `:collation` | `optional collation object` Collation used. |
+   | `:hint`      | `optional map` Indexing hint. |
    
    **Returns**
 
    ```Clojure
    {:deleted-count <number of matching documents>}
    ```"
-  {:arglists '([<collection> <query>])}
-  [coll query]
+  {:arglists '([<collection> <query> & :collation <collation object> :hint {}])}
+  [coll query & options]
   {:pre [coll query]}
   (let [result (delete-method (h/get-collection coll)
-                              (clj->doc query))]
-    {:deleted-count (.getDeletedCount result)}))
+                              (clj->doc query)
+                              (delete-options options))]
+    {:deleted-count (.getDeletedCount result)
+     :acknowledged  (.wasAcknowledged result)}))
 
 (defn delete-one!
   "Delete first matching document.
@@ -643,25 +690,30 @@
    | ---          | --- |
    | `collection` | `keyword/string` The collection. |
    | `query`      | `map` A standard MongoDB query. |
+   | `:collation` | `optional collation object` Collation used. |
+   | `:hint`      | `optional map` Indexing hint. |
    
    **Returns**
 
    ```Clojure
    {:deleted-count <0 or 1>}
    ```"
-  {:arglists '([<collection> <query>])}
-  [coll query]
+  {:arglists '([<collection> <query> & :collation <collation object> :hint {}])}
+  [coll query & options]
   {:pre [coll query]}
   (let [result (delete-one-method (h/get-collection coll)
-                                  (clj->doc query))]
-    {:deleted-count (.getDeletedCount result)}))
+                                  (clj->doc query)
+                                  (delete-options options))]
+    {:deleted-count (.getDeletedCount result)
+     :acknowledged  (.wasAcknowledged result)}))
 
 ; TODO: test
 (defn fetch-and-delete-one!
-  [coll query]
+  [coll query & options]
   {:pre [query]}
   (-> (fetch-and-delete-method (h/get-collection coll)
-                               (clj->doc query))
+                               (clj->doc query)
+                               (fetch-and-delete-options options))
       (doc->clj)))
 
 ; ------------------------

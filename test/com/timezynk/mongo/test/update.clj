@@ -5,7 +5,8 @@
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.schema :as s]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
-  (:import [com.mongodb MongoCommandException MongoWriteException]))
+  (:import [com.mongodb MongoCommandException MongoWriteException]
+           [org.bson.types ObjectId]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -14,7 +15,9 @@
   (testing "A simple update"
     (let [res (m/insert! :companies {:name "Company"})]
       (is (= {:matched-count 1
-              :modified-count 1}
+              :modified-count 1
+              :_id nil
+              :acknowledged true}
              (m/update! :companies
                         {:_id (:_id res)}
                         {:$set {:email "test@test.com"}})))
@@ -60,20 +63,26 @@
 
 (deftest upsert
   (testing "Upsert creates a document"
-    (m/update! :companies {} {:$set {:name "Company"}})
-    (is (= 0 (count (m/fetch :companies {}))))
-    (m/update! :companies {} {:$set {:name "Company"}} :upsert? true)
-    (is (= 1 (count (m/fetch :companies {}))))))
+    (let [res (m/update! :companies {} {:$set {:name "Company"}})]
+      (is (nil? (-> res :_id)))
+      (is (= 0 (count (m/fetch :companies {})))))
+    (let [res (m/update! :companies {} {:$set {:name "Company"}} :upsert? true)]
+      (is (= ObjectId (-> res :_id type)))
+      (is (= 1 (count (m/fetch :companies {})))))))
 
 (deftest update-many
   (testing "Update one or many"
     (m/insert! :companies [{:name "Company 1"}
                            {:name "Company 2"}])
     (is (= {:matched-count 1
-            :modified-count 1}
+            :modified-count 1
+            :_id nil
+            :acknowledged true}
            (m/update-one! :companies {} {:$set {:name "Company 3"}})))
     (is (= {:matched-count 2
-            :modified-count 2}
+            :modified-count 2
+            :_id nil
+            :acknowledged true}
            (m/update! :companies {} {:$set {:name "Company 4"}})))))
 
 (deftest transaction-update-order
@@ -106,3 +115,20 @@
            (->> (m/fetch :companies)
                 (map :name)
                 (into #{}))))))
+
+(deftest unacknowledged
+  (is (= {:acknowledged false}
+         (m/update! :coll {} {:$set {:a 1}} :write-concern :unacknowledged))))
+
+(deftest hint
+  (m/insert! :coll [{:a 1} {:a 2}])
+  (m/update-one! :coll {} {:$set {:a 3}})
+  (is (= [3 2] (->> (m/fetch :coll)
+                    (map :a))))
+  (m/create-index! :coll [:a])
+  (m/update-one! :coll {} {:$set {:a 4}})
+  (is (= [4 2] (->> (m/fetch :coll)
+                    (map :a))))
+  (m/update-one! :coll {} {:$set {:a 5}} :hint [:a])
+  (is (= [4 5] (->> (m/fetch :coll)
+                    (map :a)))))
