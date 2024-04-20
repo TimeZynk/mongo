@@ -1,7 +1,9 @@
-(ns com.timezynk.mongo.test.collection-schema
+(ns com.timezynk.mongo.test.schema
   (:require
+   [clojure.set :refer [rename-keys]]
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
+   [com.timezynk.mongo.hooks :as mh]
    [com.timezynk.mongo.schema :as s]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
   (:import [com.mongodb MongoWriteException]
@@ -21,7 +23,7 @@
               :properties
               {:_id {:bsonType "objectId"}
                :name {:bsonType "string"}
-               :address {:bsonType "string"}}
+               :address {:bsonType ["string" "null"]}}
               :additionalProperties false}}
             :validationLevel "strict"
             :validationAction "error"}
@@ -30,6 +32,7 @@
     (try
       (m/insert! :users {:name "Name"})
       (m/insert! :users {:name "Name" :address "Address"})
+      (m/insert! :users {:name "Name" :address nil})
       (catch Exception _e
         (is false))))
   (testing "Inserts that don't pass validation"
@@ -155,6 +158,7 @@
     (try
       (m/insert! :coll-1 {:array [{:first "A" :last "B"}]})
       (m/insert! :coll-1 {:array [{:first "A" :last "B"}]})
+      (m/insert! :coll-1 {:array nil})
       (m/insert! :coll-2 {:array ["A" "A"]})
       (m/insert! :coll-2 {:array []})
       (catch Exception _e
@@ -201,3 +205,19 @@
     (is (thrown-with-msg? MongoWriteException
                           #"Document failed validation"
                           (m/insert! :users {:name "B"})))))
+
+(deftest schema-with-hooks
+  (mh/with-hooks {:write (fn [doc] (rename-keys doc {:key-1 :key-2}))}
+    (m/create-collection! :users :schema {:key-1 (s/map {:key-1 (s/string)})})
+    (is (= {:validator
+            {:$jsonSchema {:bsonType "object"
+                           :required ["key-2"]
+                           :properties {:_id {:bsonType "objectId"}
+                                        :key-2 {:bsonType "object"
+                                                :required ["key-2"]
+                                                :properties {:key-2 {:bsonType "string"}}
+                                                :additionalProperties false}}
+                           :additionalProperties false}}
+            :validationLevel "strict"
+            :validationAction "error"}
+           (:options (m/collection-info :users))))))

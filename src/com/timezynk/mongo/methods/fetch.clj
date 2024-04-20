@@ -1,22 +1,18 @@
 (ns ^:no-doc com.timezynk.mongo.methods.fetch
   (:require
+   [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert-types :refer [clj->doc list->doc]])
-  (:import [org.bson Document]))
+   [com.timezynk.mongo.convert :refer [list->map]]))
 
 (defn- with-options [result {:keys [collation limit only skip sort]}]
   (cond-> result
     collation (.collation collation)
     limit     (.limit limit)
-    only      (.projection (if (map? only)
-                             (clj->doc only)
-                             (list->doc only)))
+    only      (.projection (->bson (list->map only)))
     skip      (.skip skip)
-    sort      (.sort (if (map? sort)
-                       (clj->doc sort)
-                       (list->doc sort)))))
+    sort      (.sort (->bson (list->map sort)))))
 
-(defmulti fetch-method ^Document
+(defmulti fetch-method
   (fn [_coll _query options]
     {:session (some? *mongo-session*)
      :options (seq? options)}))

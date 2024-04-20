@@ -1,8 +1,7 @@
 (ns ^:no-doc com.timezynk.mongo.methods.create-index
   (:require
-  ;;  [clojure.tools.logging :as log]
-   [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert-types :refer [clj->doc]])
+   [com.timezynk.mongo.codecs.bson :refer [->bson]]
+   [com.timezynk.mongo.config :refer [*mongo-session*]])
   (:import [com.mongodb.client.model IndexOptions]))
 
 (defn- create-options ^IndexOptions
@@ -11,7 +10,7 @@
     collation   (.collation collation)
     background? (.background background?)
     name        (.name name)
-    filter      (.partialFilterExpression (clj->doc filter))
+    filter      (.partialFilterExpression (->bson filter))
     sparse?     (.sparse sparse?)
     unique?     (.unique unique?)))
 

@@ -1,7 +1,11 @@
 (ns com.timezynk.mongo.schema
   "Functions for defining a collection schema."
   (:refer-clojure :exclude [boolean map])
-  (:require [clojure.core.reducers :as r]))
+  (:require
+   [clojure.core.reducers :as r]
+   [com.timezynk.mongo.hooks :refer [*write-hook*]])
+  ;; (:import [clojure.lang PersistentArrayMap PersistentVector])
+  )
 
 (def ^:no-doc ^:const ARRAY     "array")
 (def ^:no-doc ^:const BOOLEAN   "bool")
@@ -9,6 +13,7 @@
 (def ^:no-doc ^:const ID        "objectId")
 (def ^:no-doc ^:const INTEGER   "long")
 (def ^:no-doc ^:const MAP       "object")
+(def ^:no-doc ^:const NULL      "null")
 (def ^:no-doc ^:const NUMBER    "double")
 (def ^:no-doc ^:const STRING    "string")
 (def ^:no-doc ^:const TIMESTAMP "long")
@@ -42,13 +47,41 @@
   (when max
     {:maximum max}))
 
+;; (defprotocol ^:no-doc WalkHook
+;;   (walk-hook [m]))
+
+;; (extend-protocol WalkHook
+;;   PersistentArrayMap
+;;   (walk-hook [m]
+;;     (->> (*write-hook* m)
+;;          (r/map (fn [[k v]]
+;;                   [k (walk-hook v)]))
+;;          (into {})))
+
+;;   PersistentVector
+;;   (walk-hook [v]
+;;     (mapv walk-hook v))
+
+;;   Object
+;;   (walk-hook [o] o)
+
+;;   nil
+;;   (walk-hook [_] nil))
+
 (defn- ^:no-doc convert-schema* [schema]
-  (let [properties (->> (r/map (fn [[k v]] [k (dissoc v :optional)]) schema)
+  (let [properties (->> schema
+                        (r/map (fn [[k v]]
+                                 (let [bson-type (:bsonType v)]
+                                   [k (cond-> v
+                                        (:optional v) (assoc :bsonType (if (coll? bson-type)
+                                                                         (conj bson-type NULL)
+                                                                         [bson-type NULL]))
+                                        true          (dissoc :optional))])))
                         (into {}))
-        required (->> schema
+        required (->> (*write-hook* schema)
                       (filter (fn [[_k v]]
                                 (not (:optional v))))
-                      (mapv (fn [[k _v]] (name k))))]
+                      (clojure.core/map (fn [[k _v]] (name k))))]
     (merge {:bsonType MAP
             :properties properties
             :additionalProperties false}
@@ -56,15 +89,15 @@
              {:required required}))))
 
 (defn ^:no-doc convert-schema [schema]
-  (if (contains? #{nil {}} schema)
-    schema
+  (if (seq schema)
     (let [{:keys [required properties]} (convert-schema* schema)]
       {:$jsonSchema (merge {:bsonType MAP
                             :properties (merge {:_id {:bsonType ID}}
                                                properties)
                             :additionalProperties false}
                            (when required
-                             {:required required}))})))
+                             {:required required}))})
+    schema))
 
 (defn id
   "Field must be an `ObjectId`.

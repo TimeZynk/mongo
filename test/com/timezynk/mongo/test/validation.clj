@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.test.collection-validation
+(ns com.timezynk.mongo.test.validation
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
