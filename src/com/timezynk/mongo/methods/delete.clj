@@ -13,20 +13,20 @@
 
 (defmulti delete-method ^UpdateResult
   (fn [_coll _query _options]
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod delete-method {:session true} [coll query options]
+(defmethod delete-method true [coll query options]
   (.deleteMany coll *mongo-session* query options))
 
-(defmethod delete-method {:session false} [coll query options]
+(defmethod delete-method false [coll query options]
   (.deleteMany coll query options))
 
 (defmulti delete-one-method ^UpdateResult
   (fn [_coll _query _options]
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod delete-one-method {:session true} [coll query options]
+(defmethod delete-one-method true [coll query options]
   (.deleteOne coll *mongo-session* query options))
 
-(defmethod delete-one-method {:session false} [coll query options]
+(defmethod delete-one-method false [coll query options]
   (.deleteOne coll query options))

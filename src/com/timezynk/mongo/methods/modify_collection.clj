@@ -3,6 +3,7 @@
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]]
    [com.timezynk.mongo.helpers :as h]
+   [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.schema :refer [convert-schema]])
   (:import [clojure.lang PersistentArrayMap]
@@ -27,10 +28,10 @@
   (let [schema (convert-schema schema)]
     (when validate?
       (when (and schema
-                 (first (h/do-fetch coll {:$nor [schema]} [:limit 1])))
+                 (first (fetch-method coll (->bson {:$nor [schema]}) [:limit 1])))
         (throw (MongoClientException. "Existing documents failed new schema validation")))
       (when (and validation
-                 (first (h/do-fetch coll {:$nor [validation]} [:limit 1])))
+                 (first (fetch-method coll (->bson {:$nor [validation]}) [:limit 1])))
         (throw (MongoClientException. "Existing documents failed new custom validation"))))
     (let [validator  (as-> (list-collections-method) v
                        (filter #(= (name coll) (:name %)) v)

@@ -4,10 +4,10 @@
 
 (defmulti drop-collection-method
   (fn [_coll]
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod drop-collection-method {:session true} [coll]
+(defmethod drop-collection-method true [coll]
   (.drop coll *mongo-session*))
 
-(defmethod drop-collection-method {:session false} [coll]
+(defmethod drop-collection-method false [coll]
   (.drop coll))

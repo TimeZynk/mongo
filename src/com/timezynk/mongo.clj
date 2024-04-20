@@ -7,7 +7,7 @@
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database* *mongo-session* *mongo-types*]]
    [com.timezynk.mongo.convert :refer [it->clj list->map]]
-   [com.timezynk.mongo.guards :refer [*replace-guard* catch-return]]
+   [com.timezynk.mongo.guards :refer [catch-return *insert-guard* *replace-guard* *update-guard*]]
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
@@ -18,12 +18,16 @@
    [com.timezynk.mongo.methods.delete :refer [delete-method delete-options delete-one-method]]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
+   [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
    [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method fetch-and-delete-options]]
    [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method fetch-and-replace-options]]
+   [com.timezynk.mongo.methods.fetch-and-update :refer [fetch-and-update-method fetch-and-update-options]]
+   [com.timezynk.mongo.methods.insert :refer [insert-method]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
-   [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]])
+   [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]]
+   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options]])
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb MongoClientSettings]
            [com.mongodb.client ClientSession TransactionBody]
@@ -146,17 +150,16 @@
       (it->clj)))
 
 (defmacro with-codecs
-  "Text about codecs.
+  "Functionally add or change codecs. Reverts to earlier settings when leaving scope.
    
-   | Parameter   | Description |
-   | ---         | --- |
-   | `bson-type` |  |
-   | `class`     |  |
-   | `codec`     |  |
-   | `body`      | Encapsulated program calling the database. |
+   | Parameter    | Description |
+   | ---          | --- |
+   | `codecs`     | `list` A list of codec objects. |
+   | `bson-types` | `map` A map of Bson types and their corresponding Java classes. |
+   | `body`       | Encapsulated program calling the database. |
 
    "
-  {:arglists '([<codecs> <bson-type> & <body>])}
+  {:arglists '([<codecs> <bson-types> & <body>])}
   [codecs bson-types & body]
   `(let [new-codecs# (concat *mongo-codecs*
                              ~codecs)
@@ -391,7 +394,11 @@
   {:arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
   ([coll]                 (fetch coll {}))
-  ([coll query & options] (h/do-fetch coll query options)))
+  ([coll query & options] {:pre [coll query]}
+                          (-> (fetch-method (h/get-collection coll)
+                                            (->bson query)
+                                            options)
+                              (it->clj))))
 
 (defn fetch-one
   "Return only the first document retrieved.
@@ -411,7 +418,7 @@
   {:arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :only {} :skip <count> :sort {}])}
   ([coll]                 (fetch-one coll {}))
-  ([coll query & options] (-> (h/do-fetch coll query (concat options [:limit 1]))
+  ([coll query & options] (-> (apply fetch coll query (concat options [:limit 1]))
                               (first))))
 
 (defn fetch-by-id
@@ -427,8 +434,7 @@
    
    A single document or `nil`."
   {:arglists '([<collection> <id> & :only {}])}
-  ([coll id & options] (-> (h/do-fetch coll {:_id (h/->object-id id)} options)
-                           (first))))
+  ([coll id & options] (apply fetch-one coll {:_id id} options)))
 
 (defn fetch-count
   "Count the number of documents returned.
@@ -443,9 +449,8 @@
    Number of matching documents."
   {:arglists '([<collection>] [<collection> <query>])}
   ([coll]       (fetch-count coll {}))
-  ([coll query]
-   {:pre [coll query]}
-   (count-method (h/get-collection coll) query)))
+  ([coll query] {:pre [coll query]}
+                (count-method (h/get-collection coll) query)))
 
 ; ------------------------
 ; Insert
@@ -480,15 +485,20 @@
    ```"
   {:arglists '([<collection> <document> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]]
                [<collection> <document-list> & :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
-  [coll docs & options]
-  (h/do-insert coll docs options))
+  [coll docs & {:keys [write-concern]}]
+  {:pre [coll]}
+  (catch-return
+   (*insert-guard* docs)
+   (-> (h/get-collection coll)
+       (h/write-concern-options write-concern)
+       (insert-method docs))))
 
 (defn insert-one!
   "This is identical to `insert!`, except if payload is nil, return nil instead of throwing exception. Use this function when
    the payload is expected to be a nil-able document."
   [coll doc & options]
   (when doc
-    (h/do-insert coll doc options)))
+    (apply insert! coll doc options)))
 
 ; ------------------------
 ; Update
@@ -526,8 +536,16 @@
    (update!)
    ```"
   {:arglists '([<collection> <query> <update> & :upsert? <boolean> :collation <collation object> :hint {} :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
-  [coll query update & options]
-  (h/do-update coll query update options))
+  [coll query update & {:keys [write-concern] :as options}]
+  {:pre [coll query]}
+  (catch-return
+   (*update-guard* update)
+   (-> (h/get-collection coll)
+       (h/write-concern-options write-concern)
+       (update-method (->bson query)
+                      (->bson update)
+                      (update-options options))
+       (h/update-result))))
 
 (defn set!
   "Shorthand for `update!` with a single `:$set` modifier.
@@ -542,7 +560,7 @@
   (update! :coll {} {:$set {:a 1}})
   ```"
   [coll query update & options]
-  (h/do-update coll query {:$set update} options))
+  (apply update coll query {:$set update} options))
 
 (defn update-one!
   "Update first matching document.
@@ -576,8 +594,19 @@
    (update-one!)
    ```"
   {:arglists '([<collection> <query> <update> & :upsert? <boolean> :collation <collation object> :hint {} :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
-  [coll query update & options]
-  (h/do-update-one coll query update options))
+  [coll query update & {:keys [write-concern] :as options}]
+  {:pre [coll query]}
+  (catch-return
+   (*update-guard* update)
+   (-> (h/get-collection coll)
+       (h/write-concern-options write-concern)
+       (update-one-method (->bson query)
+                          (->bson update)
+                          (update-options options))
+       (h/update-result))))
+
+(defn update-by-id! [coll id update & options]
+  (apply update-one! coll {:_id id} update options))
 
 (defn set-one!
   "Shorthand for `update-one!` with a single `:$set` modifier.
@@ -592,7 +621,10 @@
   (update-one! :coll {} {:$set {:a 1}})
   ```"
   [coll query update & options]
-  (h/do-update-one coll query {:$set update} options))
+  (apply update-one! coll query {:$set update} options))
+
+(defn set-by-id! [coll id update & options]
+  (apply set-one! coll {:_id id} update options))
 
 (defn fetch-and-update-one!
   "Update first matching document.
@@ -613,7 +645,16 @@
    A single document or nil."
   {:arglists '([<collection> <query> & :return-new? <boolean> :upsert? <boolean> :collation <collation object> :only {} :hint {} :sort {}])}
   [coll query update & options]
-  (h/do-fetch-and-update-one coll query update options))
+  {:pre [coll query]}
+  (catch-return
+   (*update-guard* update)
+   (-> (fetch-and-update-method (h/get-collection coll)
+                                (->bson query)
+                                (->bson update)
+                                (fetch-and-update-options options)))))
+
+(defn fetch-and-update-by-id! [coll id update & options]
+  (apply fetch-and-update-one! coll {:_id id} update options))
 
 (defn fetch-and-set-one!
   "Shorthand for `fetch-and-update-one!` with a single `:$set` modifier.
@@ -628,7 +669,10 @@
   (fetch-and-update-one! :coll {} {:$set {:a 1}})
   ```"
   [coll query update & options]
-  (h/do-fetch-and-update-one coll query {:$set update} options))
+  (apply fetch-and-update-one! coll query {:$set update} options))
+
+(defn fetch-and-set-by-id! [coll id update & options]
+  (apply fetch-and-set-one! coll {:_id id} update options))
 
 ; ------------------------
 ; Replace
@@ -667,6 +711,9 @@
                         (.getValue v))
       :acknowledged   (.wasAcknowledged result)})))
 
+(defn replace-one-by-id! [coll id doc & options]
+  (apply replace-one! coll {:_id id} doc options))
+
 ; TODO: test
 (defn fetch-and-replace-one!
   [coll query doc & options]
@@ -677,6 +724,9 @@
                                  (->bson query)
                                  doc
                                  (fetch-and-replace-options options)))))
+
+(defn fetch-and-replace-one-by-id! [coll id doc & options]
+  (apply fetch-and-replace-one! coll {:_id id} doc options))
 
 ; ------------------------
 ; Delete
@@ -730,13 +780,18 @@
     {:deleted-count (.getDeletedCount result)
      :acknowledged  (.wasAcknowledged result)}))
 
-; TODO: test
+(defn delete-one-by-id! [coll id & options]
+  (apply delete-one! coll {:_id id} options))
+
 (defn fetch-and-delete-one!
   [coll query & options]
   {:pre [query]}
   (-> (fetch-and-delete-method (h/get-collection coll)
                                (->bson query)
                                (fetch-and-delete-options options))))
+
+(defn fetch-and-delete-one-by-id! [coll id & options]
+  (apply fetch-and-delete-one! coll {:_id id} options))
 
 ; ------------------------
 ; Transaction
