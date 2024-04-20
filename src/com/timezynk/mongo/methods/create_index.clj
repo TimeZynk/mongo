@@ -16,10 +16,10 @@
 
 (defmulti create-index-method
   (fn [_coll _keys _options]
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod create-index-method {:session true} [coll keys options]
+(defmethod create-index-method true [coll keys options]
   (.createIndex coll *mongo-session* keys (create-options options)))
 
-(defmethod create-index-method {:session false} [coll keys options]
+(defmethod create-index-method false [coll keys options]
   (.createIndex coll keys (create-options options)))

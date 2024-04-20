@@ -2,9 +2,9 @@
   (:require
    [com.timezynk.mongo.codecs.collection :refer [collection-provider]]
    [com.timezynk.mongo.codecs.map :refer [map-provider]]
-   [com.timezynk.mongo.config :refer [*mongo-database*]]
-   )
-  (:import [com.mongodb.client MongoCollection]
+   [com.timezynk.mongo.config :refer [*mongo-database*]])
+  (:import [com.mongodb WriteConcern]
+           [com.mongodb.client MongoCollection]
            [com.mongodb.client.result UpdateResult$AcknowledgedUpdateResult UpdateResult$UnacknowledgedUpdateResult]
            [org.bson.codecs.configuration CodecRegistries]))
 
@@ -21,15 +21,26 @@
                    clojure.lang.PersistentArrayMap))
 
 #_(defprotocol ToObjectId
-  (->object-id [v]))
+    (->object-id [v]))
 
 #_(extend-protocol ToObjectId
-  String
-  (->object-id [s]
-    (ObjectId. s))
+    String
+    (->object-id [s]
+      (ObjectId. s))
 
-  ObjectId
-  (->object-id [o] o))
+    ObjectId
+    (->object-id [o] o))
+
+(defn write-concern-options [coll write-concern]
+  (cond-> coll
+    write-concern (.withWriteConcern (case write-concern
+                                       :acknowledged   WriteConcern/ACKNOWLEDGED
+                                       :unacknowledged WriteConcern/UNACKNOWLEDGED
+                                       :journaled      WriteConcern/JOURNALED
+                                       :majority       WriteConcern/MAJORITY
+                                       :w1             WriteConcern/W1
+                                       :w2             WriteConcern/W2
+                                       :w3             WriteConcern/W3))))
 
 (defprotocol UpdateResult
   (update-result [result]))

@@ -4,10 +4,10 @@
 
 (defmulti list-databases-method
   (fn []
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod list-databases-method {:session true} []
+(defmethod list-databases-method true []
   (.listDatabases *mongo-client* *mongo-session*))
 
-(defmethod list-databases-method {:session false} []
+(defmethod list-databases-method false []
   (.listDatabases *mongo-client*))

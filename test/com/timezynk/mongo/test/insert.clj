@@ -98,3 +98,10 @@
        (m/insert! :companies [{:address "A"}]))
       (catch Exception _e))
     (is (= [] (m/fetch :companies)))))
+
+(deftest unacknowledged
+  (testing "Unacknowledged insert returns payload without ids"
+   (is (= {:a 1}
+          (m/insert! :coll {:a 1} :write-concern :unacknowledged)))
+    (is (= [{:a 1} {:a 2}]
+           (m/insert! :coll [{:a 1} {:a 2}] :write-concern :unacknowledged)))))

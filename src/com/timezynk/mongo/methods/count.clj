@@ -5,10 +5,10 @@
 
 (defmulti count-method
   (fn [_coll _query]
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod count-method {:session true} [coll query]
+(defmethod count-method true [coll query]
   (.countDocuments coll *mongo-session* (->bson query)))
 
-(defmethod count-method {:session false} [coll query]
+(defmethod count-method false [coll query]
   (.countDocuments coll (->bson query)))

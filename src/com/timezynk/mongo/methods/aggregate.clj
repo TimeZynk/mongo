@@ -4,10 +4,10 @@
 
 (defmulti aggregate-method
   (fn [_coll _pipeline]
-    {:session (some? *mongo-session*)}))
+    (some? *mongo-session*)))
 
-(defmethod aggregate-method {:session true} [coll pipeline]
+(defmethod aggregate-method true [coll pipeline]
   (.aggregate coll *mongo-session* pipeline))
 
-(defmethod aggregate-method {:session false} [coll pipeline]
+(defmethod aggregate-method false [coll pipeline]
   (.aggregate coll pipeline))
