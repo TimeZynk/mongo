@@ -1,17 +1,19 @@
 (ns ^:no-doc com.timezynk.mongo.helpers
   (:require
    [com.timezynk.mongo.codecs.collection :refer [collection-provider]]
+   [com.timezynk.mongo.codecs.distinct :refer [distinct-provider]]
    [com.timezynk.mongo.codecs.map :refer [map-provider]]
    [com.timezynk.mongo.config :refer [*mongo-database*]])
   (:import [com.mongodb WriteConcern]
            [com.mongodb.client MongoCollection]
-           [com.mongodb.client.result UpdateResult$AcknowledgedUpdateResult UpdateResult$UnacknowledgedUpdateResult]
+           [com.mongodb.client.gridfs GridFSBuckets]
            [org.bson.codecs.configuration CodecRegistries]))
 
 (defn codec-registry [database codecs]
   (.withCodecRegistry database
                       (CodecRegistries/fromRegistries
                        [(CodecRegistries/fromProviders [(collection-provider)
+                                                        (distinct-provider)
                                                         (map-provider)])
                         (CodecRegistries/fromCodecs codecs)])))
 
@@ -19,6 +21,10 @@
   `(.getCollection *mongo-database*
                    (name ~coll)
                    clojure.lang.PersistentArrayMap))
+
+(defmacro get-filebucket
+  ([]       `(GridFSBuckets/create *mongo-database*))
+  ([bucket] `(GridFSBuckets/create *mongo-database* (name ~bucket))))
 
 #_(defprotocol ToObjectId
     (->object-id [v]))
@@ -41,19 +47,3 @@
                                        :w1             WriteConcern/W1
                                        :w2             WriteConcern/W2
                                        :w3             WriteConcern/W3))))
-
-(defprotocol UpdateResult
-  (update-result [result]))
-
-(extend-protocol UpdateResult
-  UpdateResult$AcknowledgedUpdateResult
-  (update-result [result]
-    {:matched-count  (.getMatchedCount result)
-     :modified-count (.getModifiedCount result)
-     :_id            (when-let [v (.getUpsertedId result)]
-                       (.getValue v))
-     :acknowledged   true})
-
-  UpdateResult$UnacknowledgedUpdateResult
-  (update-result [_result]
-    {:acknowledged   false}))

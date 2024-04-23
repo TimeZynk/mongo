@@ -23,8 +23,8 @@
                           (if (= bson-type BsonType/NULL)
                             (.readNull reader)
                             (.decodeWithChildContext decoder-context
-                                                     (.get registry
-                                                           (get *mongo-types* bson-type))
+                                                     (->> (get *mongo-types* bson-type)
+                                                          (.get registry))
                                                      reader))))))))
 
     (encode [_this writer m encoder-context]
@@ -34,8 +34,8 @@
         (if (nil? v)
           (.writeNull writer)
           (.encodeWithChildContext encoder-context
-                                   (.get registry
-                                         (type v))
+                                   (->> (type v)
+                                        (.get registry))
                                    writer
                                    v)))
       (.writeEndDocument writer))

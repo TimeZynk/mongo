@@ -1,4 +1,4 @@
-(defproject com.timezynk/mongo "0.9.13"
+(defproject com.timezynk/mongo "0.10.0"
   :description  "Clojure wrapper for com.mongodb.client Java API."
   :url          "https://github.com/TimeZynk/mongo"
   :license      {:name "MIT"

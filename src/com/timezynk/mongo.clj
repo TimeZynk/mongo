@@ -16,6 +16,7 @@
    [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
    [com.timezynk.mongo.methods.create-index :refer [create-index-method]]
    [com.timezynk.mongo.methods.delete :refer [delete-method delete-options delete-one-method]]
+   [com.timezynk.mongo.methods.distinct :refer [distinct-method]]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
    [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
@@ -27,7 +28,7 @@
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
    [com.timezynk.mongo.methods.replace :refer [replace-method replace-options]]
-   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options]])
+   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options update-result]])
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb MongoClientSettings]
            [com.mongodb.client ClientSession TransactionBody]
@@ -452,6 +453,42 @@
   ([coll query] {:pre [coll query]}
                 (count-method (h/get-collection coll) query)))
 
+(defn fetch-distinct
+  "Fetch distinct values from a particular field.
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `collection` | `keyword/string` The collection. |
+   | `field`      | `keyword/string` A field in the collection. |
+   | `query`      | `map` A standard MongoDB query. |
+   | `:validate?` | `optional boolean` The field must be part of the collection schema. Default false. |
+
+   **Returns**
+
+   A lazy sequence of distinct values.
+   
+   **Examples**
+
+   ```Clojure
+   (insert! :coll-1 [{:a 1} {:a 1} {:a 2}])
+   (fetch-distinct :coll-1 :a) ; Returns [1 2]
+   (fetch-distinct :coll-1 :b) ; Returns []
+
+   (create-collection! :coll-2 :schema {:a (map {:b (integer)})})
+   (insert! :coll-2 [{:a {:b 1}} {:a {:b 2}}])
+   (fetch-distinct :coll-2 :a.b {} :validate? true) ; Returns [1 2]
+   (fetch-distinct :coll-2 :a.a {} :validate? true) ; Returns IllegalArgumentException
+   ```"
+  {:arglists '([<collection> <field>]
+               [<collection> <field> <query> & :validate? <boolean>])}
+  ([coll field]                 (fetch-distinct coll field {}))
+  ([coll field query & options] {:pre [coll field query]}
+                                (-> (distinct-method coll
+                                                     (name field)
+                                                     (->bson query)
+                                                     options)
+                                    (it->clj))))
+
 ; ------------------------
 ; Insert
 ; ------------------------
@@ -545,7 +582,7 @@
        (update-method (->bson query)
                       (->bson update)
                       (update-options options))
-       (h/update-result))))
+       (update-result))))
 
 (defn set!
   "Shorthand for `update!` with a single `:$set` modifier.
@@ -560,7 +597,7 @@
   (update! :coll {} {:$set {:a 1}})
   ```"
   [coll query update & options]
-  (apply update coll query {:$set update} options))
+  (apply update! coll query {:$set update} options))
 
 (defn update-one!
   "Update first matching document.
@@ -603,7 +640,7 @@
        (update-one-method (->bson query)
                           (->bson update)
                           (update-options options))
-       (h/update-result))))
+       (update-result))))
 
 (defn update-by-id! [coll id update & options]
   (apply update-one! coll {:_id id} update options))

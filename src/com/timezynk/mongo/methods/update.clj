@@ -4,7 +4,23 @@
    [com.timezynk.mongo.config :refer [*mongo-session*]]
    [com.timezynk.mongo.convert :refer [list->map]])
   (:import [com.mongodb.client.model UpdateOptions]
-           [com.mongodb.client.result UpdateResult]))
+           [com.mongodb.client.result UpdateResult$AcknowledgedUpdateResult UpdateResult$UnacknowledgedUpdateResult]))
+
+(defprotocol UpdateResult
+  (update-result [result]))
+
+(extend-protocol UpdateResult
+  UpdateResult$AcknowledgedUpdateResult
+  (update-result [result]
+    {:matched-count  (.getMatchedCount result)
+     :modified-count (.getModifiedCount result)
+     :_id            (when-let [v (.getUpsertedId result)]
+                       (.getValue v))
+     :acknowledged   true})
+
+  UpdateResult$UnacknowledgedUpdateResult
+  (update-result [_result]
+    {:acknowledged   false}))
 
 (defn update-options ^UpdateOptions [{:keys [upsert? collation hint]}]
   (cond-> (UpdateOptions.)

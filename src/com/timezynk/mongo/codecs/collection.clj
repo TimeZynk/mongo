@@ -20,20 +20,20 @@
                          (if (= bson-type BsonType/NULL)
                            (.readNull reader)
                            (.decodeWithChildContext decoder-context
-                                                    (.get registry
-                                                          (get *mongo-types* bson-type))
+                                                    (->> (get *mongo-types* bson-type)
+                                                         (.get registry))
                                                     reader))))))))
 
-    (encode [_this writer v encoder-context]
+    (encode [_this writer value encoder-context]
       (.writeStartArray writer)
-      (doseq [l v]
-        (if (nil? l)
+      (doseq [v value]
+        (if (nil? v)
           (.writeNull writer)
           (.encodeWithChildContext encoder-context
-                                   (.get registry
-                                         (type l))
+                                   (->> (type v)
+                                        (.get registry))
                                    writer
-                                   l)))
+                                   v)))
       (.writeEndArray writer))
 
     (getEncoderClass [_this]

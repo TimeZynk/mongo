@@ -28,10 +28,14 @@
   (let [schema (convert-schema schema)]
     (when validate?
       (when (and schema
-                 (first (fetch-method coll (->bson {:$nor [schema]}) [:limit 1])))
+                 (first (fetch-method (h/get-collection coll)
+                                      (->bson {:$nor [schema]})
+                                      [:limit 1])))
         (throw (MongoClientException. "Existing documents failed new schema validation")))
       (when (and validation
-                 (first (fetch-method coll (->bson {:$nor [validation]}) [:limit 1])))
+                 (first (fetch-method (h/get-collection coll)
+                                      (->bson {:$nor [validation]})
+                                      [:limit 1])))
         (throw (MongoClientException. "Existing documents failed new custom validation"))))
     (let [validator  (as-> (list-collections-method) v
                        (filter #(= (name coll) (:name %)) v)

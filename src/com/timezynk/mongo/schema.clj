@@ -81,7 +81,7 @@
         required (->> (*write-hook* schema)
                       (filter (fn [[_k v]]
                                 (not (:optional v))))
-                      (clojure.core/map (fn [[k _v]] (name k))))]
+                      (clojure.core/map (fn [[k _v]] k)))]
     (merge {:bsonType MAP
             :properties properties
             :additionalProperties false}
