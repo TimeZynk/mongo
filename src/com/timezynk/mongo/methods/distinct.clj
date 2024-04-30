@@ -8,8 +8,7 @@
 
 (defn validate [coll field validate?]
   (and validate?
-       (not (-> (filter #(= (name coll)
-                            (:name %))
+       (not (-> (filter #(= (name coll) (:name %))
                         (list-collections-method))
                 (first)
                 (get-in (concat [:options :validator :$jsonSchema :properties]

@@ -5,10 +5,12 @@
 (defn timestamp-codec []
   (reify Codec
     (decode [_this reader _decoder-context]
-            (.readTimestamp reader))
+      (-> (.readTimestamp reader)
+          (.getValue)))
 
     (encode [_this writer value _encoder-context]
-      (.writeTimestamp writer value))
+      (->> (.getValue value)
+           (.writeInt64 writer value)))
 
     (getEncoderClass [_this]
       BSONTimestamp)))

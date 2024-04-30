@@ -1,8 +1,5 @@
 (ns com.timezynk.mongo.guards
   "Guards make checks of payloads before the API call proper."
-  (:require
-   [clojure.set :as set]
-   [clojure.string :as str])
   (:import [clojure.lang ExceptionInfo]))
 
 ; ------------------------
@@ -50,23 +47,6 @@
   (when (= [] doc)
     (throw (IllegalArgumentException. "Invalid pipeline for an update. The pipeline may not be empty."))))
 
-(def ^:const modifiers
-  #{:$addToSet :$bit :$currentDate :$inc :$max :$min :$mul :$pop
-    :$pull :$pullAll :$push :$rename :$set :$setOnInsert :$unset})
-
-(defn bad-modifier
-  "A default guard for `update!`, `update-one!`, `fetch-and-update-one!`. 
-   The library exception for bad modifiers is a bit uninformative,
-   and has been replaced with a better one."
-  [doc]
-  (when (and (map? doc)
-             (not (set/subset? (set (keys doc))
-                               modifiers)))
-    (throw (IllegalArgumentException. (str "not a valid modifier: "
-                                           (->> (set/difference (set (keys doc))
-                                                                modifiers)
-                                                (str/join ", ")))))))
-
 ; ------------------------
 ; Guards
 ; ------------------------
@@ -77,8 +57,7 @@
 (def ^:no-doc ^:dynamic *update-guard*
   (fn [doc]
     (nil-update doc)
-    (empty-update doc)
-    (bad-modifier doc)))
+    (empty-update doc)))
 
 (def ^:no-doc ^:dynamic *replace-guard*
   empty-update)
@@ -93,8 +72,7 @@
 
    <update-fn> guards `update!`, `update-one!`, `fetch-and-update-one!`. By default, it will
    throw exceptions for a list payload and a root field that isn't a modifier. List
-   handling is a bit wonky. Since it's not needed, it's better to not accept it. The preset
-   exception for missing modifiers is unclear, and has been replaced.
+   handling is a bit wonky. Since it's not needed, it's better to not accept it.
    
    | Parameter  | Description |
    | ---        | --- |

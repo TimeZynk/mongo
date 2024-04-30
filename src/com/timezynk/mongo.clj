@@ -3,10 +3,16 @@
   ^{:doc "A wrapper for the com.mongodb.client Java API.
           
           Requires MongoDB version 4.4 or later."}
+  (:refer-clojure :exclude [distinct])
   (:require
+   [clojure.java.io :as io]
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database* *mongo-session* *mongo-types*]]
-   [com.timezynk.mongo.convert :refer [it->clj list->map]]
+   [com.timezynk.mongo.convert :refer [grid-fs-file->clj it->clj list->map]]
+   [com.timezynk.mongo.files.delete :refer [delete-file-method]]
+   [com.timezynk.mongo.files.download :refer [download-file-method]]
+   [com.timezynk.mongo.files.info :refer [file-info-method]]
+   [com.timezynk.mongo.files.upload :refer [upload-file-method]]
    [com.timezynk.mongo.guards :refer [catch-return *insert-guard* *replace-guard* *update-guard*]]
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
@@ -276,7 +282,7 @@
    (create-collection! :users :validation {:$or [{:name {:$ne nil} :address {:$exists 0}}
                                                  {:name {:$exists 0} :address {:$ne nil}}]})
    ```"
-  {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
+  {:arglists '([<name> & :collation <collation object> :level [:strict :moderate :off] :schema {} :validation {}])}
   [coll & options]
   {:pre [coll]}
   (create-collection-method (name coll) (collection-options options)))
@@ -306,12 +312,13 @@
    ```Clojure
    (modify-collection! :coll :name :coll-2)
    ```"
-  {:arglists '([<name> & :collation <collation object> :level <integer> :schema {} :validation {}])}
+  {:arglists '([<name> & :collation <collation object> :level [:strict :moderate :off] :schema {} :validation {}])}
   [coll & options]
   {:pre [coll]}
   (modify-collection-method coll options))
 
-(defn drop-collection! [coll]
+(defn drop-collection!
+  [coll]
   {:pre [coll]}
   (drop-collection-method (h/get-collection coll)))
 
@@ -360,7 +367,8 @@
                        (->bson (list->map keys))
                        options))
 
-(defn drop-index! [coll index]
+(defn drop-index!
+  [coll index]
   {:pre [coll index]}
   (drop-index-method (h/get-collection coll)
                      index))
@@ -377,9 +385,9 @@
    | `collection` | `keyword/string` The collection. |
    | `query`      | `map` A standard MongoDB query. |
    | `:collation` | `optional collation object` Collation used. |
-   | `:limit`     | `optional int` Number of documents to fetch. |
+   | `:limit`     | `optional integer` Number of documents to fetch. |
    | `:only`      | `optional map/list` A map/list of fields to include or exclude. |
-   | `:skip`      | `optional int` Number of documents to skip before fetching. |
+   | `:skip`      | `optional integer` Number of documents to skip before fetching. |
    | `:sort`      | `optional map` A MongoDB map of sorting criteria. |
 
    **Returns**
@@ -410,7 +418,7 @@
    | `query`      | `map` A standard MongoDB query. |
    | `:collation` | `optional collation object` Collation used. |
    | `:only`      | `optional map` A MongoDB map of fields to include or exclude. |
-   | `:skip`      | `optional int` Number of documents to skip before fetching. |
+   | `:skip`      | `optional integer` Number of documents to skip before fetching. |
    | `:sort`      | `optional map` A MongoDB map of sorting criteria. |
    
    **Returns**
@@ -453,7 +461,7 @@
   ([coll query] {:pre [coll query]}
                 (count-method (h/get-collection coll) query)))
 
-(defn fetch-distinct
+(defn distinct
   "Fetch distinct values from a particular field.
    
    | Parameter    | Description |
@@ -471,17 +479,17 @@
 
    ```Clojure
    (insert! :coll-1 [{:a 1} {:a 1} {:a 2}])
-   (fetch-distinct :coll-1 :a) ; Returns [1 2]
-   (fetch-distinct :coll-1 :b) ; Returns []
+   (distinct :coll-1 :a) ; Returns [1 2]
+   (distinct :coll-1 :b) ; Returns []
 
    (create-collection! :coll-2 :schema {:a (map {:b (integer)})})
    (insert! :coll-2 [{:a {:b 1}} {:a {:b 2}}])
-   (fetch-distinct :coll-2 :a.b {} :validate? true) ; Returns [1 2]
-   (fetch-distinct :coll-2 :a.a {} :validate? true) ; Returns IllegalArgumentException
+   (distinct :coll-2 :a.b {} :validate? true) ; Returns [1 2]
+   (distinct :coll-2 :a.a {} :validate? true) ; Returns IllegalArgumentException
    ```"
   {:arglists '([<collection> <field>]
                [<collection> <field> <query> & :validate? <boolean>])}
-  ([coll field]                 (fetch-distinct coll field {}))
+  ([coll field]                 (distinct coll field {}))
   ([coll field query & options] {:pre [coll field query]}
                                 (-> (distinct-method coll
                                                      (name field)
@@ -642,7 +650,8 @@
                           (update-options options))
        (update-result))))
 
-(defn update-by-id! [coll id update & options]
+(defn update-by-id!
+  [coll id update & options]
   (apply update-one! coll {:_id id} update options))
 
 (defn set-one!
@@ -660,7 +669,8 @@
   [coll query update & options]
   (apply update-one! coll query {:$set update} options))
 
-(defn set-by-id! [coll id update & options]
+(defn set-by-id!
+  [coll id update & options]
   (apply set-one! coll {:_id id} update options))
 
 (defn fetch-and-update-one!
@@ -690,7 +700,8 @@
                                 (->bson update)
                                 (fetch-and-update-options options)))))
 
-(defn fetch-and-update-by-id! [coll id update & options]
+(defn fetch-and-update-by-id!
+  [coll id update & options]
   (apply fetch-and-update-one! coll {:_id id} update options))
 
 (defn fetch-and-set-one!
@@ -708,7 +719,8 @@
   [coll query update & options]
   (apply fetch-and-update-one! coll query {:$set update} options))
 
-(defn fetch-and-set-by-id! [coll id update & options]
+(defn fetch-and-set-by-id!
+  [coll id update & options]
   (apply fetch-and-set-one! coll {:_id id} update options))
 
 ; ------------------------
@@ -748,7 +760,8 @@
                         (.getValue v))
       :acknowledged   (.wasAcknowledged result)})))
 
-(defn replace-one-by-id! [coll id doc & options]
+(defn replace-by-id!
+  [coll id doc & options]
   (apply replace-one! coll {:_id id} doc options))
 
 ; TODO: test
@@ -762,7 +775,8 @@
                                  doc
                                  (fetch-and-replace-options options)))))
 
-(defn fetch-and-replace-one-by-id! [coll id doc & options]
+(defn fetch-and-replace-by-id!
+  [coll id doc & options]
   (apply fetch-and-replace-one! coll {:_id id} doc options))
 
 ; ------------------------
@@ -817,7 +831,8 @@
     {:deleted-count (.getDeletedCount result)
      :acknowledged  (.wasAcknowledged result)}))
 
-(defn delete-one-by-id! [coll id & options]
+(defn delete-by-id!
+  [coll id & options]
   (apply delete-one! coll {:_id id} options))
 
 (defn fetch-and-delete-one!
@@ -827,7 +842,8 @@
                                (->bson query)
                                (fetch-and-delete-options options))))
 
-(defn fetch-and-delete-one-by-id! [coll id & options]
+(defn fetch-and-delete-by-id!
+  [coll id & options]
   (apply fetch-and-delete-one! coll {:_id id} options))
 
 ; ------------------------
@@ -887,3 +903,62 @@
   (-> (aggregate-method (h/get-collection coll)
                         (map ->bson pipeline))
       (it->clj)))
+
+; ------------------------
+; Files
+; ------------------------
+
+(defn file-info
+  "Fetch files.
+   
+   | Parameter    | Description |
+   | ---          | --- |
+   | `bucket`     | `keyword/string/nil` The bucket name. Can be nil to get the default database bucket. |
+   | `query`      | `map` A standard MongoDB query. |
+   | `:collation` | `optional collation object` Collation used. |
+   | `:limit`     | `optional integer` Number of documents to fetch. |
+   | `:skip`      | `optional integer` Number of documents to skip before fetching. |
+   | `:sort`      | `optional map/list` A map/list of sorting criteria. |
+
+   **Returns**
+
+   A lazy sequence of matching documents."
+  {:arglists '([]
+               [<bucket>]
+               [<bucket> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
+  ([]                       (file-info nil {}))
+  ([bucket]                 (file-info bucket {}))
+  ([bucket query & options] (->> (file-info-method (h/get-filebucket bucket)
+                                                   (->bson query)
+                                                   options)
+                                 (it->clj)
+                                 (map grid-fs-file->clj))))
+
+(defn download-file
+  [bucket file & options]
+  (with-open [stream (io/output-stream file)]
+    (download-file-method (h/get-filebucket bucket)
+                          file
+                          stream
+                          options)))
+
+(defn upload-file!
+  [bucket file & {:keys [write-concern] :as options}]
+  (with-open [stream (io/input-stream file)]
+    (upload-file-method (-> (h/get-filebucket bucket)
+                            (h/write-concern-options write-concern))
+                        (if (= String (type file))
+                          file
+                          (apply str "File_" (repeatedly 20 #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
+                        stream
+                        options)))
+
+(defn delete-file!
+  ([id]        (delete-file! nil id))
+  ([bucket id] {:pre [id]}
+               (delete-file-method (h/get-filebucket bucket)
+                                   id)))
+
+;; (defn modify-bucket! [])
+
+;; (defn drop-bucket! [])

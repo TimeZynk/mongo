@@ -74,7 +74,9 @@
 ; Collections
 ; ------------------------
 
-(defn make-collection! [coll & options]
+(defn make-collection!
+  "Try to create a collection. If it already exists, modify it."
+  [coll & options]
   (try
     (create-collection-method (name coll) (collection-options options))
     (catch MongoCommandException _e

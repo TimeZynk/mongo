@@ -15,18 +15,18 @@
 (defmulti fetch-method
   (fn [_coll _query options]
     {:session (some? *mongo-session*)
-     :options (seq? options)}))
-
-(defmethod fetch-method {:session true :options false} [coll query _options]
-  (.find coll *mongo-session* query))
+     :options (coll? options)}))
 
 (defmethod fetch-method {:session true :options true} [coll query options]
   (-> (.find coll *mongo-session* query)
       (with-options options)))
 
-(defmethod fetch-method {:session false :options false} [coll query _options]
-  (.find coll query))
+(defmethod fetch-method {:session true :options false} [coll query _options]
+  (.find coll *mongo-session* query))
 
 (defmethod fetch-method {:session false :options true} [coll query options]
   (-> (.find coll query)
       (with-options options)))
+
+(defmethod fetch-method {:session false :options false} [coll query _options]
+  (.find coll query))

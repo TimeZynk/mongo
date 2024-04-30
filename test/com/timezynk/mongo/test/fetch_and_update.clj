@@ -29,7 +29,7 @@
                                                    '()))))
   (testing "Update requires valid modifier"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"not a valid modifier: :email"
+                          #"All update operators must start with '\$', but 'email' does not"
                           (m/fetch-and-update-one! :coll
                                                    {}
                                                    {:email "test@test.com"}))))

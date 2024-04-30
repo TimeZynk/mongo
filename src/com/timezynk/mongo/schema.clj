@@ -73,7 +73,7 @@
                         (r/map (fn [[k v]]
                                  (let [bson-type (:bsonType v)]
                                    [k (cond-> v
-                                        (:optional v) (assoc :bsonType (if (coll? bson-type)
+                                        (:optional v) (assoc :bsonType (if (sequential? bson-type)
                                                                          (conj bson-type NULL)
                                                                          [bson-type NULL]))
                                         true          (dissoc :optional))])))
@@ -193,7 +193,7 @@
          (set-max options)))
 
 (defn timestamp
-  "Field must be a `timestamp`.
+  "Field must be a `timestamp`, i.e. a positive `long integer`.
    
    | Parameter    | Description |
    | ---          | --- |
@@ -230,7 +230,7 @@
          (set-required options)))
 
 (defn date-time
-  "Field must be a `java.util.Date` object.
+  "Field must be a valid date-time object, default `java.util.Date`.
    
    | Parameter    | Description |
    | ---          | --- |
@@ -307,6 +307,7 @@
    ```Clojure
    (create-collection! :coll :schema {:field-1 (any)})
    ```"
+  {:arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType TYPES}
          (set-required options)))

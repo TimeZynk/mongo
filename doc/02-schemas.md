@@ -35,3 +35,5 @@ If more, or different, fidelity is required, custom validation can be added when
 ```
 
 Note: `{:$ne null}` and `{:$exists 1}` work equally well if a schema was defined, since `null` values are disallowed in that case.
+
+## Handling :_id

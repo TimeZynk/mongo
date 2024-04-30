@@ -10,7 +10,7 @@ The intended way of use is to add the clojar to your `project.clj` file:
  :dependencies [[com.timezynk/mongo "0.6.17"]]
 ```
 
-In order for all API function calls to work properly, you need to have at least MongoDB version 4.4 installed.
+In order for all API function calls to work properly, you need to have at least MongoDB version 4.4 installed. It is recommended that you have version 5.0 installed because it improves significantly exception messages.
 
 ## Connecting to MongoDB
 
@@ -34,7 +34,7 @@ A MongoDB server can be connected to using a connection string or a connection o
   (m/create-collection! :new-coll-2)
   (m/insert! :new-coll-2 {:key "value"}))
 
-(m/close-connecion! connection-object)
+(m/close-connection! connection-object)
 ```
 
 A call to `create-connection!` sets up a physical connection that can be reused. A call to `with-mongo` will not close it upon completion. A call using a connection string will create a local, physical connection that is then closed when completed.

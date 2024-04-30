@@ -41,13 +41,13 @@
   (-> (.insertMany coll *mongo-session* docs)
       (insert-result docs)))
 
-(defmethod insert-method {:session false :many true} [coll docs]
-  (-> (.insertMany coll docs)
-      (insert-result docs)))
-
 (defmethod insert-method {:session true :many false} [coll doc]
   (-> (.insertOne coll *mongo-session* doc)
       (insert-result doc)))
+
+(defmethod insert-method {:session false :many true} [coll docs]
+  (-> (.insertMany coll docs)
+      (insert-result docs)))
 
 (defmethod insert-method {:session false :many false} [coll doc]
   (-> (.insertOne coll doc)
