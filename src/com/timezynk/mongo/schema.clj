@@ -7,18 +7,18 @@
   ;; (:import [clojure.lang PersistentArrayMap PersistentVector])
   )
 
-(def ^:no-doc ^:const ARRAY     "array")
-(def ^:no-doc ^:const BOOLEAN   "bool")
-(def ^:no-doc ^:const DATETIME  "date")
-(def ^:no-doc ^:const ID        "objectId")
-(def ^:no-doc ^:const INTEGER   "long")
-(def ^:no-doc ^:const MAP       "object")
-(def ^:no-doc ^:const NULL      "null")
-(def ^:no-doc ^:const NUMBER    "double")
-(def ^:no-doc ^:const STRING    "string")
-(def ^:no-doc ^:const TIMESTAMP "long")
+(defonce ^:no-doc ^:const ARRAY     "array")
+(defonce ^:no-doc ^:const BOOLEAN   "bool")
+(defonce ^:no-doc ^:const DATETIME  "date")
+(defonce ^:no-doc ^:const ID        "objectId")
+(defonce ^:no-doc ^:const INTEGER   "long")
+(defonce ^:no-doc ^:const MAP       "object")
+(defonce ^:no-doc ^:const NULL      "null")
+(defonce ^:no-doc ^:const NUMBER    "double")
+(defonce ^:no-doc ^:const STRING    "string")
+(defonce ^:no-doc ^:const TIMESTAMP "long")
 ; timestamp excluded, same as integer:
-(def ^:no-doc ^:const TYPES [ARRAY BOOLEAN DATETIME ID INTEGER MAP NUMBER STRING])
+(defonce ^:no-doc ^:const TYPES [ARRAY BOOLEAN DATETIME ID INTEGER MAP NUMBER STRING])
 
 (defn- ^:no-doc set-required [{:keys [optional?]}]
   {:optional optional?})
@@ -108,11 +108,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an ObjectId and can be excluded:
    (create-collection! :coll :schema {:field-1 (id :optional? true)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType ID}
          (set-required options)))
@@ -130,11 +131,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be a string and must be included:
    (create-collection! :coll :schema {:field-1 (string)})
    ```"
-  {:arglists '([& :optional? <boolean> :in [<array of accepted values>] :regex <regular expression>
+  {:added "1.0"
+   :arglists '([& :optional? <boolean> :in [<array of accepted values>] :regex <regular expression>
                 :min-length <minimum length> :max-length <maximum length>])}
   [& options]
   (merge {:bsonType STRING}
@@ -156,11 +158,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be a number and must be included:
    (create-collection! :coll :schema {:field-1 (number)})
    ```"
-  {:arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
   [& options]
   (merge {:bsonType NUMBER}
          (set-required options)
@@ -180,11 +183,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an integer and must be included:
    (create-collection! :coll :schema {:field-1 (integer)})
    ```"
-  {:arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
   [& options]
   (merge {:bsonType INTEGER}
          (set-required options)
@@ -201,11 +205,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an integer and must be included:
    (create-collection! :coll :schema {:field-1 (timestamp)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType TIMESTAMP}
          (set-required options)
@@ -220,11 +225,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be a boolean and must be included:
    (create-collection! :coll :schema {:field-1 (boolean)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType BOOLEAN}
          (set-required options)))
@@ -238,11 +244,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; Set field-1 to current date and time:
    (create-collection! :coll :schema {:field-1 (date-time)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType DATETIME}
          (set-required options)))
@@ -256,12 +263,13 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; Set field-1 to map containing two strings:
    (create-collection! :coll :schema {:field-1 (map {:str-1 (string)
                                                      :str-2 (string)})})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [schema & options]
   (merge (convert-schema* schema)
          (set-required options)))
@@ -279,11 +287,12 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an array of strings and contain at least one element:
    (create-collection! :coll :schema {:field-1 (array (string) :min-length 1)})
    ```"
-  {:arglists '([<schema> & :optional? <boolean> :min-length <minimum length> :max-length <maximum length> :unique? <boolean>])}
+  {:added "1.0"
+   :arglists '([<schema> & :optional? <boolean> :min-length <minimum length> :max-length <maximum length> :unique? <boolean>])}
   [schema & {:keys [min-length max-length unique?] :as options}]
   (merge {:bsonType ARRAY
           :items (dissoc schema :optional)}
@@ -304,10 +313,11 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    (create-collection! :coll :schema {:field-1 (any)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType TYPES}
          (set-required options)))

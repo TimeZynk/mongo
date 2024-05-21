@@ -1,0 +1,7 @@
+{:extra-indents {aggregate    [[:block 1]]
+                 catch-return [[:block 0]]
+                 ignore-hooks [[:block 0]]
+                 transaction  [[:block 0]]
+                 with-codecs  [[:block 2]]
+                 wrap-mongo   [[:block 0]]}
+ :remove-trailing-whitespace? true}

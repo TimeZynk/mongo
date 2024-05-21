@@ -27,7 +27,7 @@
 (deftest bad-update
   (testing "Update with nil"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"update can not be null"
+                          #"Update can not be null"
                           (m/update! :coll
                                      {}
                                      nil))))
@@ -52,9 +52,9 @@
   (testing "Update with null value"
     (is (thrown-with-msg? MongoWriteException
                           #"Modifiers operate on fields but we found type null instead"
-                          (m/set! :coll
-                                  {}
-                                  nil))))
+                          (m/update! :coll
+                                     {}
+                                     {:$set nil}))))
   (testing "Pipeline with wrong stage"
     (is (thrown-with-msg? MongoCommandException
                           #"Unrecognized pipeline stage name"
@@ -64,10 +64,10 @@
 
 (deftest upsert
   (testing "Upsert creates a document"
-    (let [res (m/set! :companies {} {:name "Company"})]
+    (let [res (m/update! :companies {} {:$set {:name "Company"}})]
       (is (nil? (-> res :_id)))
       (is (= 0 (count (m/fetch :companies {})))))
-    (let [res (m/set! :companies {} {:name "Company"} :upsert? true)]
+    (let [res (m/update! :companies {} {:$set {:name "Company"}} :upsert? true)]
       (is (= ObjectId (-> res :_id type)))
       (is (= 1 (count (m/fetch :companies {})))))))
 
@@ -79,32 +79,32 @@
             :modified-count 1
             :_id nil
             :acknowledged true}
-           (m/set-one! :companies {} {:name "Company 3"})))
+           (m/update-one! :companies {} {:$set {:name "Company 3"}})))
     (is (= {:matched-count 2
             :modified-count 2
             :_id nil
             :acknowledged true}
-           (m/set! :companies {} {:name "Company 4"})))))
+           (m/update! :companies {} {:$set {:name "Company 4"}})))))
 
 (deftest transaction-update-order
   (testing "Check that transaction enforces update order"
     (m/insert! :coll {:order 0})
     (testing "Without transaction, updates are in timed order"
       (async/go
-        (Thread/sleep 1000)
-        (m/set! :coll {} {:order 2}))
-      (m/set! :coll {} {:order 1})
-      (Thread/sleep 2000)
-      (m/set! :coll {} {:order 3})
+        (Thread/sleep 500)
+        (m/update! :coll {} {:$set {:order 2}}))
+      (m/update! :coll {} {:$set {:order 1}})
+      (Thread/sleep 1000)
+      (m/update! :coll {} {:$set {:order 3}})
       (is (= 3 (:order (m/fetch-one :coll {})))))
     (testing "With transaction, collection lock enforces order"
       (async/go
-        (Thread/sleep 1000)
-        (m/set! :coll {} {:order 2}))
+        (Thread/sleep 500)
+        (m/update! :coll {} {:$set {:order 2}}))
       (m/transaction
-       (m/set! :coll {} {:order 1})
-       (Thread/sleep 2000)
-       (m/set! :coll {} {:order 3}))
+        (m/update! :coll {} {:$set {:order 1}})
+        (Thread/sleep 1000)
+        (m/update! :coll {} {:$set {:order 3}}))
       (is (= 2 (:order (m/fetch-one :coll {})))))))
 
 (deftest abort-transaction
@@ -114,8 +114,8 @@
                            {:name "2"}])
     (try
       (m/transaction
-       (m/set! :companies {:name "1"} {:name "3"})
-       (m/set! :companies {:name "2"} {:name "4" :address "A"}))
+        (m/update! :companies {:name "1"} {:$set {:name "3"}})
+        (m/update! :companies {:name "2"} {:$set {:name "4" :address "A"}}))
       (catch Exception _e))
     (is (= #{"1" "2"}
            (->> (m/fetch :companies)
@@ -123,18 +123,19 @@
                 (into #{}))))))
 
 (deftest unacknowledged
-  (is (= {:acknowledged false}
-         (m/set! :coll {} {:a 1} :write-concern :unacknowledged))))
+  (m/with-write-concern :unacknowledged
+    (is (= {:acknowledged false}
+           (m/update! :coll {} {:$set {:a 1}})))))
 
 (deftest hint
   (m/insert! :coll [{:a 1} {:a 2}])
-  (m/set-one! :coll {} {:a 3})
+  (m/update-one! :coll {} {:$set {:a 3}})
   (is (= [3 2] (->> (m/fetch :coll)
                     (map :a))))
   (m/create-index! :coll [:a])
-  (m/set-one! :coll {} {:a 4})
+  (m/update-one! :coll {} {:$set {:a 4}})
   (is (= [4 2] (->> (m/fetch :coll)
                     (map :a))))
-  (m/set-one! :coll {} {:a 5} :hint [:a])
+  (m/update-one! :coll {} {:$set {:a 5}} :hint [:a])
   (is (= [4 5] (->> (m/fetch :coll)
                     (map :a)))))

@@ -9,14 +9,19 @@
 
 (deftest switch-db
   (testing "Switch between databases"
-    (m/insert! :users {:name "1"})
-    (m/with-database "test-2"
-      (m/insert! :users {:name "2"})
+    (try
+      (m/insert! :users {:name "1"})
+      (m/with-database :test-2
+        (m/insert! :users {:name "2"})
+        (is (= 1 (m/fetch-count :users)))
+        (is (= "2" (:name (m/fetch-one :users)))))
       (is (= 1 (m/fetch-count :users)))
-      (is (= "2" (:name (m/fetch-one :users)))))
-    (is (= 1 (m/fetch-count :users)))
-    (is (= "1" (:name (m/fetch-one :users)))))
-  (testing "Cleanup"
-    (m/with-database "test-2"
-      (doseq [coll (m/list-collection-names)]
-        (m/drop-collection! coll)))))
+      (is (= "1" (:name (m/fetch-one :users))))
+      (finally
+        (m/with-database :test-2
+          (m/drop-collection! :users))))))
+
+(deftest write-concern
+  (is (thrown-with-msg? IllegalArgumentException
+                        #"No matching clause: :w4"
+                        (m/with-write-concern :w4 ()))))

@@ -5,7 +5,6 @@
    [com.timezynk.mongo.codecs.map :refer [map-provider]]
    [com.timezynk.mongo.config :refer [*mongo-database*]])
   (:import [clojure.lang PersistentArrayMap]
-           [com.mongodb WriteConcern]
            [com.mongodb.client MongoCollection]
            [com.mongodb.client.gridfs GridFSBuckets]
            [org.bson.codecs.configuration CodecRegistries]))
@@ -38,15 +37,3 @@
 
     ObjectId
     (->object-id [o] o))
-
-(defn write-concern-options [coll write-concern]
-  (cond-> coll
-    write-concern (.withWriteConcern (case write-concern
-                                       :acknowledged   WriteConcern/ACKNOWLEDGED
-                                       :unacknowledged WriteConcern/UNACKNOWLEDGED
-                                       :journaled      WriteConcern/JOURNALED
-                                       :majority       WriteConcern/MAJORITY
-                                       :w1             WriteConcern/W1
-                                       :w2             WriteConcern/W2
-                                       :w3             WriteConcern/W3))))
-

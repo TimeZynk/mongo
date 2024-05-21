@@ -25,7 +25,8 @@
   (let [res (:d (m/fetch-one :coll))]
     (is (= BigDecimal (type res)))
     (is (= 123.456M res)))
-  (m/with-codecs [(BsonDecimal128Codec.)] {BsonType/DECIMAL128 BsonDecimal128}
+  (m/with-codecs [(BsonDecimal128Codec.)]
+                 {BsonType/DECIMAL128 BsonDecimal128}
     (let [res (:d (m/fetch-one :coll))]
       (is (= BsonDecimal128 (type res))))))
 

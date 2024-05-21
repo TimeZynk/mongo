@@ -6,23 +6,23 @@
 
 Clojure and MongoDB handle types differently. Converting between different types is handled using *codecs*. MongoDB types are declared internally using the `org.bson.BsonType` enum class. Each is matched to a codec that handles one or many external types:
 
-| BsonType | Clojure (or other) type |
-| --- | --- |
-| ARRAY | **PersistentVector**, LazySeq, PersistentHashSet |
-| BINARY | byte[], java.util.UUID |
-| BOOLEAN | Boolean |
-| DATE_TIME | java.util.Date |
-| DECIMAL128 | java.math.BigDecimal |
-| DOCUMENT | PersistentArrayMap |
-| DOUBLE | Double |
-| INT32 | **Long**, Integer |
-| INT64 | Long |
-| OBJECT_ID | org.bson.types.ObjectId |
-| REGULAR_EXPRESSION | java.util.regex.Pattern |
-| STRING | String |
-| SYMBOL | Symbol |
-| TIMESTAMP | **Long**, org.bson.types.BSONTimestamp |
-| UNDEFINED | **nil**, org.bson.BsonUndefined |
+| BsonType           | Clojure (or other) type                          |
+| ------------------ | ------------------------------------------------ |
+| ARRAY              | **PersistentVector**, LazySeq, PersistentHashSet |
+| BINARY             | byte[], java.util.UUID                           |
+| BOOLEAN            | Boolean                                          |
+| DATE_TIME          | java.util.Date                                   |
+| DECIMAL128         | java.math.BigDecimal                             |
+| DOCUMENT           | PersistentArrayMap                               |
+| DOUBLE             | Double                                           |
+| INT32              | **Long**, Integer                                |
+| INT64              | Long                                             |
+| OBJECT_ID          | org.bson.types.ObjectId                          |
+| REGULAR_EXPRESSION | java.util.regex.Pattern                          |
+| STRING             | String                                           |
+| SYMBOL             | Symbol                                           |
+| TIMESTAMP          | **Long**, org.bson.types.BSONTimestamp           |
+| UNDEFINED          | **nil**, org.bson.BsonUndefined                  |
 
 Any external type not represented in the table above can be added in a custom codec, and any of the represented ones can be replaced with a different codec.
 
@@ -113,7 +113,7 @@ Used by the codec framework to match the object to the codec.
 
 MongoDB expects a `java.util.Date` object for storing date-time values. This class isn't very useful, so as an example let's use the much better `java.time.LocalDateTime` class instead:
 
-```Clojure
+```clojure
 (defn localdatetime-codec []
   (reify org.bson.codecs.Codec
     (decode [_this reader _decoder-context]
@@ -132,19 +132,19 @@ MongoDB expects a `java.util.Date` object for storing date-time values. This cla
 
 Date-time values are read and written as epoch milli-seconds. TzMongo expects codecs in an array:
 
-```Clojure
+```clojure
 (def new-codecs [(localdatetime-codec)])
 ```
 
 Adding this codec allows TzMongo to write `java.time.LocalDateTime` objects to MongoDB, but MongoDB date-time objects will still be read back as `java.util.Date` objects, because we need to tell the codec framework how to match the objects when decoding:
 
-```Clojure
+```clojure
 (def new-types {org.bson.BsonType/DATE_TIME java.time.LocalDateTime})
 ```
 
 Then we add the codec with the binding macro `with-codecs`:
 
-```Clojure
+```clojure
 (with-codecs new-codecs new-types
   (insert! :coll {:date-time (java.time.LocalDateTime/now)}) ; Adds current time and date
   (insert! :coll (:date-time (java.util.Date.))) ; Still works fine

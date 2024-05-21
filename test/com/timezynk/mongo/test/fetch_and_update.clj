@@ -12,7 +12,7 @@
 (deftest bad-update
   (testing "Update with nil"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"update can not be null"
+                          #"Update can not be null"
                           (m/fetch-and-update-one! :coll
                                                    {}
                                                    nil))))

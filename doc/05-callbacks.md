@@ -8,7 +8,7 @@ There are two ways to automate interjection through call-back functions during c
 
 Hooks allow you to make operations on documents (queries and payloads) during an API call. The main intention is to allow schema conversions to and from MongoDB.
 
-```Clojure
+```clojure
 (require '[com.timezynk.mongo.hooks :refer [with-hooks]])
 
 (with-hooks {:write #(rename-keys % {:a :b})

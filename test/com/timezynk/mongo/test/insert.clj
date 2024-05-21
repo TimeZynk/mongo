@@ -4,7 +4,8 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.schema :as s]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu])
+   [com.timezynk.mongo.test.utils.db-utils :as dbu]
+   [clojure.tools.logging :as log])
   (:import [java.util.concurrent CountDownLatch TimeUnit]
            [org.bson BsonInvalidOperationException]
            [org.bson.types ObjectId]))
@@ -71,10 +72,10 @@
           latch-3 (CountDownLatch. 1)]
       (async/go
         (m/transaction
-         (m/insert! :companies {:duplicity 2})
-         (.countDown latch-1)
-         (is (true? (.await latch-2 5 TimeUnit/SECONDS)))
-         (m/insert! :companies {:duplicity 3}))
+          (m/insert! :companies {:duplicity 2})
+          (.countDown latch-1)
+          (is (true? (.await latch-2 5 TimeUnit/SECONDS)))
+          (m/insert! :companies {:duplicity 3}))
         (.countDown latch-3))
       (testing "Make one insert in the transaction"
         (is (true? (.await latch-1 5 TimeUnit/SECONDS)))
@@ -84,19 +85,32 @@
         (is (true? (.await latch-3 5 TimeUnit/SECONDS)))
         (is (= 2 (count (m/fetch :companies))))))))
 
+(deftest transaction-insert-fetch
+  (testing "Outside insert must wait"
+    (is (zero? (m/fetch-count :coll)))
+    (async/go
+      (Thread/sleep 500)
+      (m/insert! :coll {:b 2}))
+    (m/transaction
+      (m/insert! :coll {:a 1})
+      (Thread/sleep 1000)
+      (is (= 1 (count (log/spy (m/fetch :coll))))))
+    (is (= 2 (m/fetch-count :coll)))))
+
 (deftest abort-transaction
   (testing "Aborted transaction makes no inserts"
     (m/create-collection! :companies :schema {:name (s/string)})
     (try
       (m/transaction
-       (m/insert! :companies {:name "1"})
-       (m/insert! :companies {:address "A"}))
+        (m/insert! :companies {:name "1"})
+        (m/insert! :companies {:address "A"}))
       (catch Exception _e))
     (is (= [] (m/fetch :companies)))))
 
 (deftest unacknowledged
   (testing "Unacknowledged insert returns payload without ids"
-    (is (= {:a 1}
-           (m/insert! :coll {:a 1} :write-concern :unacknowledged)))
-    (is (= [{:a 1} {:a 2}]
-           (m/insert! :coll [{:a 1} {:a 2}] :write-concern :unacknowledged)))))
+    (m/with-write-concern :unacknowledged
+      (is (= {:a 1}
+             (m/insert! :coll {:a 1})))
+      (is (= [{:a 1} {:a 2}]
+             (m/insert! :coll [{:a 1} {:a 2}]))))))

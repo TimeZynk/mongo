@@ -14,7 +14,7 @@
    
    **Examples**
    
-   ```Clojure
+   ```clojure
    (defn insert-event [time doc]
      ; Do something
    )
@@ -37,7 +37,7 @@
    
    **Examples**
    
-   ```Clojure
+   ```clojure
    (defn update-event [time updated-fields]
      ; Do something
    )
@@ -60,7 +60,7 @@
    
    **Examples**
    
-   ```Clojure
+   ```clojure
    (defn delete-event [time id]
      ; Do something
    )

@@ -1,5 +1,7 @@
 (ns com.timezynk.mongo.guards
   "Guards make checks of payloads before the API call proper."
+  [:require
+   [com.timezynk.mongo.assert :refer [assert-keys]]]
   (:import [clojure.lang ExceptionInfo]))
 
 ; ------------------------
@@ -13,10 +15,11 @@
    
    Ignore any insert calls with a message:
 
-   ```Clojure
+   ```clojure
    (with-guards {:insert (fn [_] (return \"a message\"))}
      (insert! :coll {:a 1})) ; No call made, just returns \"a message\"
    ```"
+  {:added "1.0"}
   [result]
   `(throw (ex-info "returning early" {:result ~result})))
 
@@ -29,6 +32,7 @@
 (defn bounce-empty
   "A default guard for `insert!`, `insert-one!`.
    An empty payload is allowed but does nothing."
+  {:added "1.0"}
   [doc]
   (when (= [] doc)
     (return doc)))
@@ -36,13 +40,15 @@
 (defn nil-update
   "A default guard for `update!`, `update-one!`, `fetch-and-update-one!`.
    Ensure consistent exception for nil."
+  {:added "1.0"}
   [doc]
   (when (nil? doc)
-    (throw (IllegalArgumentException. "update can not be null"))))
+    (throw (IllegalArgumentException. "Update can not be null"))))
 
 (defn empty-update
   "A default guard for `update!`, `update-one!`, `fetch-and-update-one!`, `replace-one!`,
    `fetch-and-replace-one!`. An empty payload should always throw an exception."
+  {:added "1.0"}
   [doc]
   (when (= [] doc)
     (throw (IllegalArgumentException. "Invalid pipeline for an update. The pipeline may not be empty."))))
@@ -83,17 +89,16 @@
    
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; Remove guards for payload:
    (with-guards {:insert identity}
      (insert! :coll [])) ; Throws exception
    ```"
-  {:arglists '([{:insert <insert-fn> :update <update-fn> :replace <replace-fn>} & <body>])}
-  [{:keys [insert update replace]} & body]
-  `(let [insert#  ~insert
-         update#  ~update
-         replace# ~replace]
-     (binding [*insert-guard*  (or insert#  *insert-guard*)
-               *update-guard*  (or update#  *update-guard*)
-               *replace-guard* (or replace# *replace-guard*)]
-       ~@body)))
+  {:added "1.0"
+   :arglists '([{:insert <insert-fn> :update <update-fn> :replace <replace-fn>} & <body>])}
+  [{:keys [insert update replace] :as options} & body]
+  (assert-keys options #{:insert :update :replace})
+  `(binding [*insert-guard*  (or ~insert  *insert-guard*)
+             *update-guard*  (or ~update  *update-guard*)
+             *replace-guard* (or ~replace *replace-guard*)]
+     ~@body))

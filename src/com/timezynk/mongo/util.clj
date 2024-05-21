@@ -1,4 +1,5 @@
 (ns com.timezynk.mongo.util
+  "Convenience functions for automating certain tasks."
   (:require
    [clojure.tools.logging :as log]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database*]]
@@ -20,7 +21,8 @@
    | Parameter | Description |
    | ---       | --- |
    | `uri`     | `string` Database location. |"
-  {:arglists '([<uri>])}
+  {:added "1.0"
+   :arglists '([<uri>])}
   [uri & options]
   (reset! mongo-uri {:uri uri
                      :options options}))
@@ -39,7 +41,8 @@
           connection))))
 
 (defmacro wrap-mongo
-  "Functionally set up or change mongodb connection, using a persistent connection. Reverts to earlier settings when leaving scope.
+  "Functionally set up or change mongodb connection, creating a persistent connection from a previously defined connection string.
+   Reverts to earlier settings when leaving scope.
    
    1. Looks for a connection string set by a prior call to `set-mongo-uri!`.
    2. Failing that, retrieves a connection string `MONGO_URI` environment variable.
@@ -56,13 +59,14 @@
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    (set-mongo-uri! \"mongodb://localhost:27017/my-database\")
    (wrap-mongo
-    (insert! :users {:name \"My Name\"})
-    (fetch! :users))
+     (insert! :users {:name \"My Name\"})
+     (fetch! :users))
    ```"
-  {:arglists '([& <body>])}
+  {:added "1.0"
+   :arglists '([& <body>])}
   [& body]
   `(let [client# (upsert-connection)]
      (binding [*mongo-client*   (:client client#)
@@ -76,6 +80,7 @@
 
 (defn make-collection!
   "Try to create a collection. If it already exists, modify it."
+  {:added "1.0"}
   [coll & options]
   (try
     (create-collection-method (name coll) (collection-options options))

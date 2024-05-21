@@ -23,28 +23,30 @@
       Date)))
 
 (deftest file
-  (testing "Upload a file and fetch the file info"
-    (let [file-name "temp.bin"]
-      (try
-        (let [file "ABCDEFGHIJ"
-              _    (spit file-name file)
-              id   (m/upload-file! nil file-name :metadata {:a "Hey"})
-              _    (is (= ObjectId (type id)))
-              info (first (m/file-info))]
+  (let [file-name "temp.bin"]
+    (try
+      (let [file "ABCDEFGHIJ"
+            _    (spit file-name file)
+            id   (m/upload-file! nil file-name :metadata {:a "Hey"})
+            _    (is (= ObjectId (type id)))
+            info (first (m/file-info))]
+        (testing "Upload a file and fetch the file info"
           (are [a b] (= a (b info))
             261120     :chunk-size
             file-name  :file-name
             id         :_id
             10         :length
-            {:a "Hey"} :metadata)
-          (testing "Check that default datetime decoder is used"
-            (is (= Date (-> info :upload-date type))))
-          (testing "Use a different datetime decoder"
-            (m/with-codecs [(datetime-codec)] {}
-              (let [info (first (m/file-info))]
-                (is (= Long (-> info :upload-date type))))))
-          (delete-file file-name)
+            {:a "Hey"} :metadata))
+        (testing "Check that default datetime decoder is used"
+          (is (= Date (-> info :upload-date type))))
+        (testing "Use a different datetime decoder"
+          (m/with-codecs [(datetime-codec)]
+                         {}
+            (let [info (first (m/file-info))]
+              (is (= Long (-> info :upload-date type))))))
+        (delete-file file-name)
+        (testing "Download by file-name"
           (m/download-file nil file-name)
-          (is (= file (slurp file-name))))
-        (finally
-          (delete-file file-name :silently))))))
+          (is (= file (slurp file-name)))))
+      (finally
+        (delete-file file-name :silently)))))

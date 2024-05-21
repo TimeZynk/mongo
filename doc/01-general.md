@@ -6,7 +6,7 @@ This is a Clojure wrapper utilizing the modern (as of 2022), synchronous java AP
 
 The intended way of use is to add the clojar to your `project.clj` file:
 
-```Clojure
+```clojure
  :dependencies [[com.timezynk/mongo "0.6.17"]]
 ```
 
@@ -16,7 +16,7 @@ In order for all API function calls to work properly, you need to have at least 
 
 A MongoDB server can be connected to using a connection string or a connection object:
 
-```Clojure
+```clojure
 (require '[com.timezynk.mongo :as m])
 
 (def connection-string "mongodb://mongodb/my-db")
@@ -41,7 +41,7 @@ A call to `create-connection!` sets up a physical connection that can be reused.
 
 There are utility functions for reusing a process-local connection:
 
-```Clojure
+```clojure
 (require '[com.timezynk.mongo.util :as mu])
 
 (mu/set-mongo-uri! "mongodb://mongodb/my-db" :write-concern :w1)
@@ -59,7 +59,7 @@ When creating the persistent connection object, the connecion string and options
 
 Most function calls are variadic, i.e. accept optional parameters. The optional parameters are labelled:
 
-```Clojure
+```clojure
 (def collation (m/collation "se" :alternate :shifted))
 ```
 
