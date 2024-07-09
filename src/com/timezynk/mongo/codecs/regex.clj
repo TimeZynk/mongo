@@ -6,10 +6,14 @@
 (defn regex-codec []
   (reify Codec
     (decode [_this reader _decoder-context]
-      (.readString (Pattern/compile (.getPattern reader))))
+      (->> (.readRegularExpression reader)
+           (.getPattern)
+           (Pattern/compile)))
 
     (encode [_this writer value _encoder-context]
-      (.writeRegularExpression writer (BsonRegularExpression. (.pattern value))))
+      (->> (.pattern value)
+           (BsonRegularExpression.)
+           (.writeRegularExpression writer)))
 
     (getEncoderClass [_this]
       Pattern)))

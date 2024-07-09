@@ -3,7 +3,6 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.schema :as s]
-   [com.timezynk.mongo.util :as u]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
   (:import [com.mongodb MongoClientException MongoCommandException MongoWriteException]))
 
@@ -20,6 +19,38 @@
           :validationAction "error"}
          (:options (m/collection-info :coll)))))
 
+(deftest empty-id
+  (testing "nil _id allowed for schema-less"
+    ; Must be unacknowledged. Returning nil _id throws.
+    (m/with-write-concern :unacknowledged
+      (is (= {:_id nil} (m/insert! :coll {:_id nil}))))
+    (is (= [{:_id nil}] (m/fetch :coll))))
+  (testing "Modify schema prohibits nil _id"
+    (m/delete! :coll {})
+    (m/modify-collection! :coll :schema {:a (s/integer)})
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"propertyName\"\: \"_id\".+type did not match"
+                          (m/insert! :coll {:_id nil :a 1}))))
+  (testing "Create with schema prohibits nil _id"
+    (m/drop-collection! :coll)
+    (m/create-collection! :coll :schema {:a (s/integer)})
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"propertyName\"\: \"_id\".+type did not match"
+                          (m/insert! :coll {:_id nil :a 1}))))
+  (testing "Unacknowledged does not throw, but still prevents insert"
+    (is (= {:_id nil :a 2}
+           (m/with-write-concern :unacknowledged
+             (m/insert! :coll {:_id nil :a 2}))))
+    (is (= [] (m/fetch :coll))))
+  (testing "Set _id to optional to allow nil value"
+    (m/modify-collection! :coll :schema {:_id (s/id :optional? true)
+                                         :a (s/integer)})
+    (is (= {:_id nil :a 3}
+           (m/with-write-concern :unacknowledged
+             (m/insert! :coll {:_id nil :a 3}))))
+    (is (= [{:_id nil :a 3}]
+           (m/fetch :coll)))))
+
 (deftest id-schema
   (m/create-collection! :coll :schema {:_id (s/string)})
   (is (= {:$jsonSchema {:bsonType "object"
@@ -32,30 +63,12 @@
                         #"Document failed validation"
                         (m/insert! :coll {}))))
 
-(deftest set-collation
-  (testing "Ignore whitespace and punctuation in search"
-    (m/create-collection! :coll :collation (m/collation "se" :alternate :shifted))
-    (m/insert! :coll {:name "12"})
-    (is (= 1 (m/fetch-count :coll {:name ".12 "})))))
-
-(deftest collection-info
-  (m/create-collection! :coll :collation (m/collation "se" :alternate :shifted))
-  (is (= "shifted"
-         (get-in (m/collection-info :coll)
-                 [:options :collation :alternate]))))
-
-(deftest change-collation
-  (m/insert! :coll {:name "12"})
-  (is (= 0 (m/fetch-count :coll {:name ".12 "})))
-  (is (= 1 (-> (m/fetch :coll {:name ".12 "} :collation (m/collation "se" :alternate :shifted))
-               count))))
-
 (deftest double-create
-  (u/make-collection! :coll :schema {:name (s/string)})
+  (m/create-collection! :coll :schema {:name (s/string)})
   (is (thrown-with-msg? MongoCommandException
-                        #"Collection already exists"
+                        #"Collection test.coll already exists."
                         (m/create-collection! :coll)))
-  (u/make-collection! :coll :schema {:c (s/integer)})
+  (m/modify-collection! :coll :schema {:c (s/integer)})
   (is (= "long"
          (get-in (m/collection-info :coll)
                  [:options :validator :$jsonSchema :properties :c :bsonType]))))

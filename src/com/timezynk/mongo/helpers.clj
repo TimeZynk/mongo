@@ -4,7 +4,7 @@
    [com.timezynk.mongo.codecs.distinct :refer [distinct-provider]]
    [com.timezynk.mongo.codecs.map :refer [map-provider]]
    [com.timezynk.mongo.config :refer [*mongo-database*]])
-  (:import [com.mongodb WriteConcern]
+  (:import [clojure.lang PersistentArrayMap]
            [com.mongodb.client MongoCollection]
            [com.mongodb.client.gridfs GridFSBuckets]
            [org.bson.codecs.configuration CodecRegistries]))
@@ -20,11 +20,12 @@
 (defmacro get-collection ^MongoCollection [coll]
   `(.getCollection *mongo-database*
                    (name ~coll)
-                   clojure.lang.PersistentArrayMap))
+                   PersistentArrayMap))
 
-(defmacro get-filebucket
-  ([]       `(GridFSBuckets/create *mongo-database*))
-  ([bucket] `(GridFSBuckets/create *mongo-database* (name ~bucket))))
+(defmacro get-filebucket [bucket]
+  `(if ~bucket
+     (GridFSBuckets/create *mongo-database* (name ~bucket))
+     (GridFSBuckets/create *mongo-database*)))
 
 #_(defprotocol ToObjectId
     (->object-id [v]))
@@ -36,14 +37,3 @@
 
     ObjectId
     (->object-id [o] o))
-
-(defn write-concern-options [coll write-concern]
-  (cond-> coll
-    write-concern (.withWriteConcern (case write-concern
-                                       :acknowledged   WriteConcern/ACKNOWLEDGED
-                                       :unacknowledged WriteConcern/UNACKNOWLEDGED
-                                       :journaled      WriteConcern/JOURNALED
-                                       :majority       WriteConcern/MAJORITY
-                                       :w1             WriteConcern/W1
-                                       :w2             WriteConcern/W2
-                                       :w3             WriteConcern/W3))))

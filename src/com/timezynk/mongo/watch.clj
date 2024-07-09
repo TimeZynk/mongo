@@ -5,16 +5,16 @@
 (defn on-insert
   "Listen for an `insert!` event.
    
-   | Parameter           | Description |
-   | ---                 | --- |
-   | `collection`        | `keyword/string` The collection. |
-   | `callback function` | `function` A callback function that accepts two parameters: |
-   |                     | `java.util.Date` Time of event. |
-   |                     | `map` The inserted document. |
+   | Parameter           | Description
+   | ---                 | ---
+   | `collection`        | `keyword/string` The collection.
+   | `callback function` | `function` A callback function that accepts two parameters:
+   |                     | `java.util.Date` Time of event.
+   |                     | `map` The inserted document.
    
    **Examples**
    
-   ```Clojure
+   ```clojure
    (defn insert-event [time doc]
      ; Do something
    )
@@ -28,16 +28,16 @@
 (defn on-update
   "Listen for an `update!` event.
    
-   | Parameter           | Description |
-   | ---                 | --- |
-   | `collection`        | `keyword/string` The collection. |
-   | `callback function` | `function` A callback function that accepts three parameters: |
-   |                     | `java.util.Date` Time of event. |
-   |                     | `map` Contains the id of the updated document, plus the fields that were updated. |
+   | Parameter           | Description
+   | ---                 | ---
+   | `collection`        | `keyword/string` The collection.
+   | `callback function` | `function` A callback function that accepts three parameters:
+   |                     | `java.util.Date` Time of event.
+   |                     | `map` Contains the id of the updated document, plus the fields that were updated.
    
    **Examples**
    
-   ```Clojure
+   ```clojure
    (defn update-event [time updated-fields]
      ; Do something
    )
@@ -51,16 +51,16 @@
 (defn on-delete
   "Listen for an `update!` event.
    
-   | Parameter           | Description |
-   | ---                 | --- |
-   | `collection`        | `keyword/string` The collection. |
-   | `callback function` | `function` A callback function that accepts three parameters: |
-   |                     | `java.util.Date` Time of event. |
-   |                     | `map` Contains a single `_id` field with the id of the deleted document. |
+   | Parameter           | Description
+   | ---                 | ---
+   | `collection`        | `keyword/string` The collection.
+   | `callback function` | `function` A callback function that accepts three parameters:
+   |                     | `java.util.Date` Time of event.
+   |                     | `map` Contains a single `_id` field with the id of the deleted document.
    
    **Examples**
    
-   ```Clojure
+   ```clojure
    (defn delete-event [time id]
      ; Do something
    )

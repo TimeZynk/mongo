@@ -12,7 +12,7 @@
 (deftest bad-update
   (testing "Update with nil"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"update can not be null"
+                          #"Update can not be null"
                           (m/fetch-and-update-one! :coll
                                                    {}
                                                    nil))))
@@ -29,7 +29,7 @@
                                                    '()))))
   (testing "Update requires valid modifier"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"not a valid modifier: :email"
+                          #"All update operators must start with '\$', but 'email' does not"
                           (m/fetch-and-update-one! :coll
                                                    {}
                                                    {:email "test@test.com"}))))

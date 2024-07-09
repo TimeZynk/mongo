@@ -38,17 +38,13 @@
      :many    (sequential? doc)}))
 
 (defmethod insert-method {:session true :many true} [coll docs]
-  (-> (.insertMany coll *mongo-session* docs)
-      (insert-result docs)))
-
-(defmethod insert-method {:session false :many true} [coll docs]
-  (-> (.insertMany coll docs)
-      (insert-result docs)))
+  (.insertMany coll *mongo-session* docs))
 
 (defmethod insert-method {:session true :many false} [coll doc]
-  (-> (.insertOne coll *mongo-session* doc)
-      (insert-result doc)))
+  (.insertOne coll *mongo-session* doc))
+
+(defmethod insert-method {:session false :many true} [coll docs]
+  (.insertMany coll docs))
 
 (defmethod insert-method {:session false :many false} [coll doc]
-  (-> (.insertOne coll doc)
-      (insert-result doc)))
+  (.insertOne coll doc))

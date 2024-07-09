@@ -14,7 +14,7 @@
     (is (= {:deleted-count 1
             :acknowledged true}
            (m/delete-one! :companies {})))
-    (is (= 1 (count (m/fetch :companies {}))))))
+    (is (= 1 (count (m/fetch :companies))))))
 
 (deftest multiple-delete
   (testing "Create two docs, delete both"

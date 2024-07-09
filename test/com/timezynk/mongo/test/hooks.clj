@@ -2,12 +2,22 @@
   (:require
    [clojure.set :refer [rename-keys]]
    [clojure.test :refer [deftest is testing use-fixtures]]
+   [com.timezynk.mongo.assert :refer [catch-assert]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.hooks :as mh]
    [com.timezynk.mongo.test.utils.db-utils :as dbu]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
+
+(deftest valid-keys
+  (testing "Valid hook keys"
+    (is (= 0 (catch-assert
+              (mh/with-hooks {:read ()
+                              :write ()})))))
+  (testing "Invalid hook key"
+    (is (= 1 (catch-assert
+              (mh/with-hooks {:rea ()}))))))
 
 (deftest hooks
   (mh/with-hooks {:write (fn [doc] (rename-keys doc {:key-1 :key-2}))
@@ -16,14 +26,14 @@
                            {:key-1 "key-1"
                             :key   {:key-1 "key-key-1"}})
           res-2 (mh/ignore-hooks
-                 (m/insert! :coll
-                            {:key-1 "key-1"
-                             :key   {:key-1 "key-key-1"}}))
+                  (m/insert! :coll
+                             {:key-1 "key-1"
+                              :key   {:key-1 "key-key-1"}}))
           res-3 (m/fetch-one :coll
                              {:_id (:_id res-1)})
           res-4 (mh/ignore-hooks
-                 (m/fetch-one :coll
-                              {:_id (:_id res-1)}))]
+                  (m/fetch-one :coll
+                               {:_id (:_id res-1)}))]
       (testing "Insert response only adds _id"
         (is (= {:key   {:key-1 "key-key-1"}
                 :key-1 "key-1"}
