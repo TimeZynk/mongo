@@ -2,7 +2,7 @@
 
 When creating a collection, an optional schema can be added:
 
-```Clojure
+```clojure
 (require '[com.timezynk.mongo :as m])
 (require '[com.timezynk.mongo.schema :as s])
 
@@ -29,9 +29,11 @@ Any document will be validated for both inserts and updates. A violation will ca
 
 If more, or different, fidelity is required, custom validation can be added when creating the collection. For example, let's say that users don't need both an address and reg-no, but must have at least one:
 
-```Clojure
+```clojure
 (m/create-collection! :users :validation {:$or [{:address {:$ne nil}}
                                                 {:reg-no {:$ne nil}}]})
 ```
 
 Note: `{:$ne null}` and `{:$exists 1}` work equally well if a schema was defined, since `null` values are disallowed in that case.
+
+## Handling :_id

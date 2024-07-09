@@ -7,18 +7,18 @@
   ;; (:import [clojure.lang PersistentArrayMap PersistentVector])
   )
 
-(def ^:no-doc ^:const ARRAY     "array")
-(def ^:no-doc ^:const BOOLEAN   "bool")
-(def ^:no-doc ^:const DATETIME  "date")
-(def ^:no-doc ^:const ID        "objectId")
-(def ^:no-doc ^:const INTEGER   "long")
-(def ^:no-doc ^:const MAP       "object")
-(def ^:no-doc ^:const NULL      "null")
-(def ^:no-doc ^:const NUMBER    "double")
-(def ^:no-doc ^:const STRING    "string")
-(def ^:no-doc ^:const TIMESTAMP "long")
+(defonce ^:no-doc ^:const ARRAY     "array")
+(defonce ^:no-doc ^:const BOOLEAN   "bool")
+(defonce ^:no-doc ^:const DATETIME  "date")
+(defonce ^:no-doc ^:const ID        "objectId")
+(defonce ^:no-doc ^:const INTEGER   "long")
+(defonce ^:no-doc ^:const MAP       "object")
+(defonce ^:no-doc ^:const NULL      "null")
+(defonce ^:no-doc ^:const NUMBER    "double")
+(defonce ^:no-doc ^:const STRING    "string")
+(defonce ^:no-doc ^:const TIMESTAMP "long")
 ; timestamp excluded, same as integer:
-(def ^:no-doc ^:const TYPES [ARRAY BOOLEAN DATETIME ID INTEGER MAP NUMBER STRING])
+(defonce ^:no-doc ^:const TYPES [ARRAY BOOLEAN DATETIME ID INTEGER MAP NUMBER STRING])
 
 (defn- ^:no-doc set-required [{:keys [optional?]}]
   {:optional optional?})
@@ -73,7 +73,7 @@
                         (r/map (fn [[k v]]
                                  (let [bson-type (:bsonType v)]
                                    [k (cond-> v
-                                        (:optional v) (assoc :bsonType (if (coll? bson-type)
+                                        (:optional v) (assoc :bsonType (if (sequential? bson-type)
                                                                          (conj bson-type NULL)
                                                                          [bson-type NULL]))
                                         true          (dissoc :optional))])))
@@ -102,17 +102,18 @@
 (defn id
   "Field must be an `ObjectId`.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `:optional?` | `optional boolean` Is the field optional? |
+   | Parameter    | Description
+   | ---          | ---
+   | `:optional?` | `optional boolean` Is the field optional?
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an ObjectId and can be excluded:
    (create-collection! :coll :schema {:field-1 (id :optional? true)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType ID}
          (set-required options)))
@@ -120,21 +121,22 @@
 (defn string
   "Field must be a `string`.
    
-   | Parameter     | Description |
-   | ---           | --- |
-   | `:optional?`  | `optional boolean` Is the field optional? |
-   | `:in`         | `optional seq` A collection of acceptable values. |
-   | `:regex`      | `optional string` A regular expression that values must pass. |
-   | `:min-length` | `optional integer` Minimum length of the string. |
-   | `:max-length` | `optional integer` Maximum length of the string. |
+   | Parameter     | Description
+   | ---           | ---
+   | `:optional?`  | `optional boolean` Is the field optional?
+   | `:in`         | `optional seq` A collection of acceptable values.
+   | `:regex`      | `optional string` A regular expression that values must pass.
+   | `:min-length` | `optional integer` Minimum length of the string.
+   | `:max-length` | `optional integer` Maximum length of the string.
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be a string and must be included:
    (create-collection! :coll :schema {:field-1 (string)})
    ```"
-  {:arglists '([& :optional? <boolean> :in [<array of accepted values>] :regex <regular expression>
+  {:added "1.0"
+   :arglists '([& :optional? <boolean> :in [<array of accepted values>] :regex <regular expression>
                 :min-length <minimum length> :max-length <maximum length>])}
   [& options]
   (merge {:bsonType STRING}
@@ -147,20 +149,21 @@
 (defn number
   "Field must be an 8-byte `double`.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `:optional?` | `optional boolean` Is the field optional? |
-   | `:in`        | `optional seq` A collection of acceptable values. |
-   | `:min`       | `optional integer` Minimum value. |
-   | `:max`       | `optional integer` Maximum value. |
+   | Parameter    | Description
+   | ---          | ---
+   | `:optional?` | `optional boolean` Is the field optional?
+   | `:in`        | `optional seq` A collection of acceptable values.
+   | `:min`       | `optional integer` Minimum value.
+   | `:max`       | `optional integer` Maximum value.
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be a number and must be included:
    (create-collection! :coll :schema {:field-1 (number)})
    ```"
-  {:arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
   [& options]
   (merge {:bsonType NUMBER}
          (set-required options)
@@ -171,20 +174,21 @@
 (defn integer
   "Field must be an 8-byte `long integer`.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `:optional?` | `optional boolean` Is the field optional? |
-   | `:in`        | `optional seq` A collection of acceptable values. |
-   | `:min`       | `optional integer` Minimum value. |
-   | `:max`       | `optional integer` Maximum value. |
+   | Parameter    | Description
+   | ---          | ---
+   | `:optional?` | `optional boolean` Is the field optional?
+   | `:in`        | `optional seq` A collection of acceptable values.
+   | `:min`       | `optional integer` Minimum value.
+   | `:max`       | `optional integer` Maximum value.
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an integer and must be included:
    (create-collection! :coll :schema {:field-1 (integer)})
    ```"
-  {:arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean> :in [<array of accepted values>] :min <minimum> :max <maximum>])}
   [& options]
   (merge {:bsonType INTEGER}
          (set-required options)
@@ -193,19 +197,20 @@
          (set-max options)))
 
 (defn timestamp
-  "Field must be a `timestamp`.
+  "Field must be a `timestamp`, i.e. a positive `long integer`.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `:optional?` | `optional boolean` Is the field optional? |
+   | Parameter    | Description
+   | ---          | ---
+   | `:optional?` | `optional boolean` Is the field optional?
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an integer and must be included:
    (create-collection! :coll :schema {:field-1 (timestamp)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType TIMESTAMP}
          (set-required options)
@@ -214,35 +219,37 @@
 (defn boolean
   "Field must be a `boolean`.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `:optional?` | `optional boolean` Is the field optional? |
+   | Parameter    | Description
+   | ---          | ---
+   | `:optional?` | `optional boolean` Is the field optional?
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be a boolean and must be included:
    (create-collection! :coll :schema {:field-1 (boolean)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType BOOLEAN}
          (set-required options)))
 
 (defn date-time
-  "Field must be a `java.util.Date` object.
+  "Field must be a valid date-time object, default `java.util.Date`.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `:optional?` | `optional boolean` Is the field optional? |
+   | Parameter    | Description
+   | ---          | ---
+   | `:optional?` | `optional boolean` Is the field optional?
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; Set field-1 to current date and time:
    (create-collection! :coll :schema {:field-1 (date-time)})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType DATETIME}
          (set-required options)))
@@ -250,18 +257,19 @@
 (defn map
   "Field must be a `map`.
    
-   | Parameter    | Description |
-   | ---          | --- |
-   | `:optional?` | `optional boolean` Is the field optional? |
+   | Parameter    | Description
+   | ---          | ---
+   | `:optional?` | `optional boolean` Is the field optional?
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; Set field-1 to map containing two strings:
    (create-collection! :coll :schema {:field-1 (map {:str-1 (string)
                                                      :str-2 (string)})})
    ```"
-  {:arglists '([& :optional? <boolean>])}
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [schema & options]
   (merge (convert-schema* schema)
          (set-required options)))
@@ -269,21 +277,22 @@
 (defn array
   "Field must be an `array`.
    
-   | Parameter     | Description |
-   | ---           | --- |
-   | `schema`      | `fn` A call to a schema function. |
-   | `:optional?`  | `optional boolean` Is the field optional? |
-   | `:min-length` | `optional integer` Minimum length of the array. |
-   | `:max-length` | `optional integer` Maximum length of the array. |
-   | `:unique?`    | `optional boolean` Whether array values must be unique. |
+   | Parameter     | Description
+   | ---           | ---
+   | `schema`      | `fn` A call to a schema function.
+   | `:optional?`  | `optional boolean` Is the field optional?
+   | `:min-length` | `optional integer` Minimum length of the array.
+   | `:max-length` | `optional integer` Maximum length of the array.
+   | `:unique?`    | `optional boolean` Whether array values must be unique.
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    ; field-1 must be an array of strings and contain at least one element:
    (create-collection! :coll :schema {:field-1 (array (string) :min-length 1)})
    ```"
-  {:arglists '([<schema> & :optional? <boolean> :min-length <minimum length> :max-length <maximum length> :unique? <boolean>])}
+  {:added "1.0"
+   :arglists '([<schema> & :optional? <boolean> :min-length <minimum length> :max-length <maximum length> :unique? <boolean>])}
   [schema & {:keys [min-length max-length unique?] :as options}]
   (merge {:bsonType ARRAY
           :items (dissoc schema :optional)}
@@ -298,15 +307,17 @@
 (defn any
   "Field can be of any type.
    
-   | Parameter     | Description |
-   | ---           | --- |
-   | `:optional?`  | `optional boolean` Is the field optional? |
+   | Parameter     | Description
+   | ---           | ---
+   | `:optional?`  | `optional boolean` Is the field optional?
 
    **Examples**
    
-   ```Clojure
+   ```clojure
    (create-collection! :coll :schema {:field-1 (any)})
    ```"
+  {:added "1.0"
+   :arglists '([& :optional? <boolean>])}
   [& options]
   (merge {:bsonType TYPES}
          (set-required options)))

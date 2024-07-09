@@ -6,7 +6,9 @@
   (reify Codec
     (decode [_this reader _decoder-context]
       (let [bin (.readBinaryData reader)]
-        (Binary. (.getType bin) (.getData bin))))
+        (case (.getType bin)
+          4 (.asUuid bin)
+          (.getData bin))))
 
     (encode [_this writer value _encoder-context]
       (.writeBinaryData writer value))

@@ -15,8 +15,10 @@
                  [org.clojure/tools.logging "1.2.4"]
                  [org.mongodb/mongodb-driver-sync "5.0.1"]]
   :repl-options {:init-ns com.timezynk.mongo}
-  :test-paths   ["src" "test"]
-  :plugins      [[lein-cljfmt "0.6.7"]]
+  :test-paths   ["test"]
+  :plugins      [[com.github.clj-kondo/lein-clj-kondo "0.2.1"]
+                 [dev.weavejester/lein-cljfmt "0.12.0"]]
   :profiles     {:kaocha {:dependencies [[lambdaisland/kaocha "1.0.632"]]
                           :jvm-opts ["-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2"]}}
-  :aliases      {"kaocha" ["with-profile" "+kaocha" "run" "-m" "kaocha.runner"]})
+  :aliases      {"kaocha" ["with-profile" "+kaocha" "run" "-m" "kaocha.runner"]}
+  :cljfmt       {:load-config-file? true})

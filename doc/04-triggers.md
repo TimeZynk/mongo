@@ -2,7 +2,7 @@
 
 Also known as *listeners* or *watchers*, these functions allow you to monitor collection activity; Each time a document is inserted, updated, or deleted, a call-back function is invoked.
 
-```Clojure
+```clojure
 (require '[clojure.tools.logging :as log])
 (require '[com.timezynk.mongo.watch :as w])
 

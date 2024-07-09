@@ -27,7 +27,7 @@
 (deftest bad-update
   (testing "Update with nil"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"update can not be null"
+                          #"Update can not be null"
                           (m/update! :coll
                                      {}
                                      nil))))
@@ -44,10 +44,11 @@
                                      '()))))
   (testing "Update requires valid modifier"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"not a valid modifier: :email"
+                          #"All update operators must start with '\$', but 'email' does not"
                           (m/update! :coll
                                      {}
-                                     {:email "test@test.com"}))))
+                                     {:email "test@test.com"
+                                      :name "Name"}))))
   (testing "Update with null value"
     (is (thrown-with-msg? MongoWriteException
                           #"Modifiers operate on fields but we found type null instead"
@@ -87,29 +88,34 @@
 
 (deftest transaction-update-order
   (testing "Check that transaction enforces update order"
-    (m/insert! :companies {:name "1"})
-    (let [write-thread (fn []
-                         (Thread/sleep 1000)
-                         (m/update! :companies {} {:$set {:name "2"}}))]
-      (async/thread
-        (write-thread))
+    (m/insert! :coll {:order 0})
+    (testing "Without transaction, updates are in timed order"
+      (async/go
+        (Thread/sleep 500)
+        (m/update! :coll {} {:$set {:order 2}}))
+      (m/update! :coll {} {:$set {:order 1}})
+      (Thread/sleep 1000)
+      (m/update! :coll {} {:$set {:order 3}})
+      (is (= 3 (:order (m/fetch-one :coll {})))))
+    (testing "With transaction, collection lock enforces order"
+      (async/go
+        (Thread/sleep 500)
+        (m/update! :coll {} {:$set {:order 2}}))
       (m/transaction
-       (m/update! :companies {} {:$set {:name "3"}})
-       (Thread/sleep 2000)))
-    (is (= "3" (:name (m/fetch-one :companies {}))))))
+        (m/update! :coll {} {:$set {:order 1}})
+        (Thread/sleep 1000)
+        (m/update! :coll {} {:$set {:order 3}}))
+      (is (= 2 (:order (m/fetch-one :coll {})))))))
 
 (deftest abort-transaction
   (testing "Aborted transaction makes no updates"
-    (try
-      (m/drop-collection! :companies)
-      (catch Exception _e))
     (m/create-collection! :companies :schema {:name (s/string)})
     (m/insert! :companies [{:name "1"}
                            {:name "2"}])
     (try
       (m/transaction
-       (m/update! :companies {:name "1"} {:$set {:name "3"}})
-       (m/update! :companies {:name "2"} {:$set {:name "4" :address "A"}}))
+        (m/update! :companies {:name "1"} {:$set {:name "3"}})
+        (m/update! :companies {:name "2"} {:$set {:name "4" :address "A"}}))
       (catch Exception _e))
     (is (= #{"1" "2"}
            (->> (m/fetch :companies)
@@ -117,8 +123,9 @@
                 (into #{}))))))
 
 (deftest unacknowledged
-  (is (= {:acknowledged false}
-         (m/update! :coll {} {:$set {:a 1}} :write-concern :unacknowledged))))
+  (m/with-write-concern :unacknowledged
+    (is (= {:acknowledged false}
+           (m/update! :coll {} {:$set {:a 1}})))))
 
 (deftest hint
   (m/insert! :coll [{:a 1} {:a 2}])

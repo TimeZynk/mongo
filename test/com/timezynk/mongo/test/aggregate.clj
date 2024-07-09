@@ -13,7 +13,7 @@
                          {:name "3" :duplicity 3}])
   (is (= #{{:duplicity 2} {:duplicity 3}}
          (->> (m/aggregate :companies
-                           {:$match {:duplicity {:$gte 2}}}
-                           {:$project {:_id 0
-                                       :duplicity 1}})
+                {:$match {:duplicity {:$gte 2}}}
+                {:$project {:_id 0
+                            :duplicity 1}})
               (into #{})))))

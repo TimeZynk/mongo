@@ -11,7 +11,7 @@
   (m/insert! :coll
              [{:name "1" :username "1"}
               {:name "2" :username "2"}])
-  (m/create-index! :coll {:name 1 :username 1} :unique true)
+  (m/create-index! :coll {:name 1 :username 1} :unique? true)
   (is (= #{{:_id 1}
            {:name 1 :username 1}}
          (->> (m/list-indexes :coll)
@@ -22,7 +22,7 @@
   (m/insert! :coll
              [{:name "1"}
               {:name "2" :username "2"}])
-  (m/create-index! :coll {:name 1 :username 1} :unique true)
+  (m/create-index! :coll {:name 1 :username 1} :unique? true)
   (is (= #{{:_id 1}
            {:name 1 :username 1}}
          (->> (m/list-indexes :coll)

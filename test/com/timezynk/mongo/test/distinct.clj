@@ -9,21 +9,25 @@
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
 (deftest fetch-distinct
-  (m/create-collection! :coll :schema {:name (s/string)})
   (m/insert! :coll [{:name "A"}
                     {:name "A"}
                     {:name "C"}
                     {:name "C"}
                     {:name "B"}])
-  (is (= [] (m/fetch-distinct :coll :a)))
-  (is (= ["A" "B" "C"] (m/fetch-distinct :coll :name)))
-  (is (= ["A" "B"] (m/fetch-distinct :coll :name {:name {:$lte "B"}}))))
+  (is (= [] (m/distinct :coll :a)))
+  (is (= ["A" "B" "C"] (m/distinct :coll :name)))
+  (is (= ["A" "B"] (m/distinct :coll :name {:name {:$lte "B"}})))
+  (is (thrown-with-msg? IllegalArgumentException
+                        #"Not part of schema: name"
+                        (m/distinct :coll :name {} :validate? true))))
 
 (deftest fetch-in
   (m/create-collection! :coll :schema {:a (s/map {:b (s/integer)})})
   (m/insert! :coll [{:a {:b 1}}
+                    {:a {:b 1}}
                     {:a {:b 2}}])
-  (is (= [1 2] (m/fetch-distinct :coll :a.b {} :validate? true)))
+  (is (= [1 2] (m/distinct :coll :a.b {} :validate? true)))
+  (is (= [{:b 1} {:b 2}] (m/distinct :coll :a {} :validate? true)))
   (is (thrown-with-msg? IllegalArgumentException
                         #"Not part of schema: a\.a"
-                        (m/fetch-distinct :coll :a.a {} :validate? true))))
+                        (m/distinct :coll :a.a {} :validate? true))))
