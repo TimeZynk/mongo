@@ -7,7 +7,7 @@ This is a Clojure wrapper utilizing the modern (as of 2022), synchronous java AP
 The intended way of use is to add the clojar to your `project.clj` file:
 
 ```clojure
- :dependencies [[com.timezynk/mongo "0.6.17"]]
+ :dependencies [[com.timezynk/mongo "0.10.1"]]
 ```
 
 In order for all API function calls to work properly, you need to have at least MongoDB version 4.4 installed. It is recommended that you have version 5.0 installed because it improves significantly exception messages.

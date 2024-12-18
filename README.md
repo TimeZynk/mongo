@@ -6,27 +6,27 @@ A Clojure wrapper for the [modern MongoDB Java driver](https://mongodb.github.io
 
 ### Leiningen/Boot
 
-    [com.timezynk/mongo "0.9.4"]
+    [com.timezynk/mongo "0.10.1"]
 
 ### Clojure CLI/deps.edn
 
-    com.timezynk/mongo {:mvn/version "0.9.4"}
+    com.timezynk/mongo {:mvn/version "0.10.1"}
 
 ### Gradle
 
-    implementation("com.timezynk:mongo:0.9.4")
+    implementation("com.timezynk:mongo:0.10.1")
 
 ### Maven
 
     <dependency>
       <groupId>com.timezynk</groupId>
       <artifactId>mongo</artifactId>
-      <version>0.9.4</version>
+      <version>0.10.1</version>
     </dependency>
 
 ## API
 
-[cljdoc.org](https://cljdoc.org/d/com.timezynk/mongo/0.9.4/api/com.timezynk.mongo)
+[cljdoc.org](https://cljdoc.org/d/com.timezynk/mongo/0.10.1/api/com.timezynk.mongo)
 
 ## Testing
 
@@ -42,7 +42,7 @@ You need MongoDB version 4.4 or later installed.
 
 1. In a new terminal window, create the replica set (this is only required once):
 
-       mongo --eval "rs.initiate({ \"_id\": \"rs0\", members: [{ \"_id\": 0, host: \"localhost:27017\" }]}, { force: true })"
+       mongosh --eval "rs.initiate({ \"_id\": \"rs0\", members: [{ \"_id\": 0, host: \"localhost:27017\" }]}, { force: true })"
 
 1. Start testing.
 
