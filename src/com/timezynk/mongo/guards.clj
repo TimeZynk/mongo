@@ -51,7 +51,7 @@
   {:added "1.0"}
   [doc]
   (when (= [] doc)
-    (throw (IllegalArgumentException. "Invalid pipeline for an update. The pipeline may not be empty."))))
+    (throw (IllegalArgumentException. "Invalid pipeline for an update. The pipeline can not be empty."))))
 
 ; ------------------------
 ; Guards

@@ -16,12 +16,12 @@
                                                     nil))))
   (testing "Replace with empty list"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          #"Invalid pipeline for an update. The pipeline can not be empty."
                           (m/fetch-and-replace-one! :coll
                                                     {}
                                                     [])))
     (is (thrown-with-msg? IllegalArgumentException
-                          #"Invalid pipeline for an update. The pipeline may not be empty."
+                          #"Invalid pipeline for an update. The pipeline can not be empty."
                           (m/fetch-and-replace-one! :coll
                                                     {}
                                                     '())))))

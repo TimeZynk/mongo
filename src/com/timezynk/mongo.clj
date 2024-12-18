@@ -19,7 +19,6 @@
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
    [com.timezynk.mongo.methods.connection :refer [get-read-concern get-write-concern connection-method]]
-   [com.timezynk.mongo.methods.connection-pool-stats :refer [connection-pool-method]]
    [com.timezynk.mongo.methods.count :refer [count-method]]
    [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
    [com.timezynk.mongo.methods.create-index :refer [create-index-method]]
@@ -36,6 +35,7 @@
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
    [com.timezynk.mongo.methods.replace :refer [replace-method replace-options replace-result]]
+   [com.timezynk.mongo.methods.run-command :refer [run-command-method]]
    [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options update-result]])
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb MongoClientSettings]
@@ -181,11 +181,6 @@
   []
   (keyword (.getName *mongo-database*)))
 
-(defn connection-pool-stats
-  {:added "1.0"}
-  []
-  (connection-pool-method))
-
 (defmacro with-codecs
   "Add or change codecs.
    Reverts to earlier settings when leaving scope.
@@ -248,6 +243,21 @@
   [write-concern & body]
   `(binding [*mongo-database* (.withWriteConcern *mongo-database* (get-write-concern ~write-concern))]
      ~@body))
+
+(defn connection-pool-stats
+  {:added "1.0"}
+  []
+  (run-command-method {:connPoolStats 1}))
+
+(defn server-status
+  {:added "1.0"}
+  []
+  (run-command-method {:serverStatus 1}))
+
+(defn run-command
+  {:added "1.0"}
+  [cmd]
+  (run-command-method cmd))
 
 ; ------------------------
 ; Collation

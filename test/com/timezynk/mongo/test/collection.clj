@@ -66,7 +66,7 @@
 (deftest double-create
   (m/create-collection! :coll :schema {:name (s/string)})
   (is (thrown-with-msg? MongoCommandException
-                        #"Collection test.coll already exists."
+                        #"namespace test.coll already exists."
                         (m/create-collection! :coll)))
   (m/modify-collection! :coll :schema {:c (s/integer)})
   (is (= "long"

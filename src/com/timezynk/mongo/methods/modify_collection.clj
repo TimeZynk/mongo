@@ -53,11 +53,16 @@
     (some? *mongo-session*)))
 
 (defmethod set-validation-method true [coll schema validation validate?]
-  (.runCommand *mongo-database* *mongo-session* (set-validation coll schema validation validate?) PersistentArrayMap)
+  (.runCommand *mongo-database*
+               *mongo-session*
+               (set-validation coll schema validation validate?)
+               PersistentArrayMap)
   coll)
 
 (defmethod set-validation-method false [coll schema validation validate?]
-  (.runCommand *mongo-database* (set-validation coll schema validation validate?) PersistentArrayMap)
+  (.runCommand *mongo-database*
+               (set-validation coll schema validation validate?)
+               PersistentArrayMap)
   coll)
 
 (defn modify-collection-method [coll {:keys [name schema validation validate?]}]
