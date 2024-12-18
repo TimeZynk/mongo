@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.methods.run-command
+(ns ^:no-doc com.timezynk.mongo.methods.run-command
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]])
