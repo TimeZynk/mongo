@@ -3,7 +3,8 @@
    [com.timezynk.mongo.codecs.keyword :refer [keyword->str]]
    [com.timezynk.mongo.hooks :refer [*read-hook* *write-hook*]]
    [com.timezynk.mongo.config :refer [*mongo-types*]])
-  (:import [clojure.lang PersistentArrayMap]
+  (:import [clojure.lang PersistentArrayMap PersistentHashMap]
+           [java.util LinkedHashMap]
            [org.bson BsonType]
            [org.bson.codecs Codec]
            [org.bson.codecs.configuration CodecProvider]))
@@ -46,5 +47,5 @@
 (defn map-provider []
   (reify CodecProvider
     (get [_this clazz registry]
-      (when (= clazz PersistentArrayMap)
+      (when (contains? #{LinkedHashMap PersistentArrayMap PersistentHashMap} clazz)
         (map-codec registry)))))

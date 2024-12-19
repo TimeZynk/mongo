@@ -2,18 +2,26 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]])
-  (:import [clojure.lang PersistentArrayMap]))
+  (:import [clojure.lang PersistentArrayMap]
+           [java.util LinkedHashMap]))
+
+(defn- build-params [cmd val options]
+  (let [map (LinkedHashMap.)]
+    (.put map cmd val)
+    (when options
+      (.putAll map options))
+    (->bson map)))
 
 (defmulti run-command-method
-  (fn [_cmd] (some? *mongo-session*)))
+  (fn [_cmd _val _options] (some? *mongo-session*)))
 
-(defmethod run-command-method true [cmd]
+(defmethod run-command-method true [cmd val options]
   (.runCommand *mongo-database*
                *mongo-session*
-               (->bson cmd)
+               (build-params cmd val options)
                PersistentArrayMap))
 
-(defmethod run-command-method false [cmd]
+(defmethod run-command-method false [cmd val options]
   (.runCommand *mongo-database*
-               (->bson cmd)
+               (build-params cmd val options)
                PersistentArrayMap))

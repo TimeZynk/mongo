@@ -36,6 +36,7 @@
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
    [com.timezynk.mongo.methods.replace :refer [replace-method replace-options replace-result]]
    [com.timezynk.mongo.methods.run-command :refer [run-command-method]]
+   [com.timezynk.mongo.methods.server-status :refer [server-status-method]]
    [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options update-result]])
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb MongoClientSettings]
@@ -244,20 +245,64 @@
   `(binding [*mongo-database* (.withWriteConcern *mongo-database* (get-write-concern ~write-concern))]
      ~@body))
 
-(defn connection-pool-stats
-  {:added "1.0"}
-  []
-  (run-command-method {:connPoolStats 1}))
-
 (defn server-status
-  {:added "1.0"}
-  []
-  (run-command-method {:serverStatus 1}))
+  "Fetch information about the server.
+   
+   | Parameter | Description
+   | ---       | ---
+   | `options` | `optional keywords` Fields to be included in the result.
+   |           | When providing options, fields not included will be excluded from result.
+   |           | Not providing any option will yield a full result, including all fields.
+   
+   Options are not checked for correctness. Valid options may vary depending on the MongoDB version.
+   
+   **Returns**
+   
+   The status object.
+   
+   **Examples**
+   ```clojure
+   (server-status :asserts :queues)
+
+   (server-status :assets) ; Runs fine, but will only return the minimal status information.
+   ```"
+  {:added "1.0"
+   :arglists '([& :asserts :batchedDeletes :bucketCatalog :catalogStats :changeStreamPreImages :collectionCatalog
+                :connections :defaultRWConcern :electionMetrics :extra_info :featureCompatibilityVersion :flowControl
+                :globalLock :hedgingMetrics :indexBuilds :indexBulkBuilder :indexStats :internalTransactions :locks
+                :logicalSessionRecordCache :mem :metrics :mirroredReads :network :opLatencies :opWorkingTime
+                :opReadConcernCounters :opWriteConcernCounters :opcounters :opcountersRepl :oplogTruncation
+                :planCache :queryAnalyzers :querySettings :queryStats :queues :readConcernCounters
+                :readPreferenceCounters :repl :scramCache :security :shardedIndexConsistency :shardingStatistics
+                :shardSplits :storageEngine :tcmalloc :tenantMigrations :trafficRecording :transactions :transportSecurity
+                :twoPhaseCommitCoordinator :watchdog :wiredTiger])}
+  [& options]
+  (server-status-method options))
 
 (defn run-command
-  {:added "1.0"}
-  [cmd]
-  (run-command-method cmd))
+  "Run custom commands.
+   
+   | Parameter   | Description
+   | ---         | ---
+   | `command`   | `keyword` The command to be executed.
+   | `parameter` | The parameter fo the command. Typically just the number 1.
+   | `options`   | Key-value pairs of optional parameters specific to the command.
+   
+   Options are not checked for correctness.
+   
+   **Returns**
+   
+   Results vary depending on the command.
+   
+   **Examples**
+   
+   ```clojure
+   (run-command :collStats \"coll-name\" :scale 1)
+   ```"
+  {:added "1.0"
+   :arglists '([<command> <parameter> & <options>])}
+  [cmd val & {:as options}]
+  (run-command-method cmd val options))
 
 ; ------------------------
 ; Collation
@@ -386,7 +431,7 @@
    | `:collation`  | `optional collation object` The collation of the collection.
    | `:schema`     | `optional map` The schema validation map.
    | `:validation` | `optional map` Validation logic outside of the schema.
-   | `:level`      | `optional keyword enum` Validaton level:
+   | `:level`      | `optional keyword enum` Validation level:
    |               | `:strict` Apply validation rules to all inserts and all updates. Default value.
    |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents.
    |               | `:off` No validation for inserts or updates.
@@ -402,7 +447,7 @@
    (modify-collection! :coll :name :coll-2)
    ```"
   {:added "1.0"
-   :arglists '([<name> & :collation <collation object> :level [:strict :moderate :off] :schema {} :validation {}])}
+   :arglists '([<name> & :collation <collation object> :level [:strict :moderate :off] :name <new name> :schema {} :validation {}])}
   [coll & {:as options}]
   (assert-keys options #{:collation :level :name :schema :validate? :validation})
   `(modify-collection-method ~coll ~options))
@@ -741,7 +786,7 @@
    (update-one!)
    ```"
   {:added "1.0"
-   :arglists '([<collection> <query> <update> & :upsert? <boolean> :collation <collation object> :hint {} :write-concern [:acknowledged :unacknowledged :journaled :majority :w1 :w2 :w3]])}
+   :arglists '([<collection> <query> <update> & :upsert? <boolean> :collation <collation object> :hint {}])}
   [coll query update & {:as options}]
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
