@@ -279,7 +279,7 @@
   [& options]
   (server-status-method options))
 
-(defn run-command
+(defn run-command!
   "Run custom commands.
    
    | Parameter   | Description
@@ -297,7 +297,7 @@
    **Examples**
    
    ```clojure
-   (run-command :collStats \"coll-name\" :scale 1)
+   (run-command! :collStats \"coll-name\" :scale 1)
    ```"
   {:added "1.0"
    :arglists '([<command> <parameter> & <options>])}

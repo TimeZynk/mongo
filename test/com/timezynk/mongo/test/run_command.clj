@@ -33,16 +33,16 @@
 (deftest run-command
   (is (= #{:authenticatedUserRoles
            :authenticatedUsers}
-         (->> (m/run-command :connectionStatus 1
-                             :showPrivileges false)
+         (->> (m/run-command! :connectionStatus 1
+                              :showPrivileges false)
               :authInfo
               keys
               (into #{}))))
   (is (= #{:authenticatedUserPrivileges
            :authenticatedUserRoles
            :authenticatedUsers}
-         (->> (m/run-command :connectionStatus 1
-                             :showPrivileges true)
+         (->> (m/run-command! :connectionStatus 1
+                              :showPrivileges true)
               :authInfo
               keys
               (into #{})))))
