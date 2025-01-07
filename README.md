@@ -6,27 +6,27 @@ A Clojure wrapper for the [modern MongoDB Java driver](https://mongodb.github.io
 
 ### Leiningen/Boot
 
-    [com.timezynk/mongo "0.10.2"]
+    [com.timezynk/mongo "0.10.3"]
 
 ### Clojure CLI/deps.edn
 
-    com.timezynk/mongo {:mvn/version "0.10.2"}
+    com.timezynk/mongo {:mvn/version "0.10.3"}
 
 ### Gradle
 
-    implementation("com.timezynk:mongo:0.10.2")
+    implementation("com.timezynk:mongo:0.10.3")
 
 ### Maven
 
     <dependency>
       <groupId>com.timezynk</groupId>
       <artifactId>mongo</artifactId>
-      <version>0.10.2</version>
+      <version>0.10.3</version>
     </dependency>
 
 ## API
 
-[cljdoc.org](https://cljdoc.org/d/com.timezynk/mongo/0.10.2/api/com.timezynk.mongo)
+[cljdoc.org](https://cljdoc.org/d/com.timezynk/mongo/0.10.3/api/com.timezynk.mongo)
 
 ## Testing
 

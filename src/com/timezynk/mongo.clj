@@ -217,7 +217,8 @@
    |                  | `:local` The query returns data from the instance with no guarantee that the data has been written to a majority of the replica set members (i.e. may be rolled back).
    |                  | `:majority` The query returns the data that has been acknowledged by a majority of the replica set members. The documents returned by the read operation are durable, even in the event of failure.
    |                  | `:snapshot` Returns majority-committed data as it appears across shards from a specific single point in time in the recent past.
-   |                  | [Read more about read concerns](https://www.mongodb.com/docs/manual/reference/read-concern/)."
+   
+   [Manual reference](https://www.mongodb.com/docs/manual/reference/read-concern/)"
   {:added "1.0"
    :arglists '([<read-concern> & <body>])}
   [read-concern & body]
@@ -238,7 +239,8 @@
    |                  | `:w1` Wait for acknowledgement from a single member.
    |                  | `:w2` Wait for acknowledgement from two members.
    |                  | `:w3` Wait for acknowledgement from three members.
-   |                  | [Read more about write concerns](https://www.mongodb.com/docs/manual/reference/write-concern/)."
+   
+   [Manual reference](https://www.mongodb.com/docs/manual/reference/write-concern/)"
   {:added "1.0"
    :arglists '([<write-concern> & <body>])}
   [write-concern & body]
@@ -255,6 +257,7 @@
    |           | Not providing any option will yield a full result, including all fields.
    
    Options are not checked for correctness. Valid options may vary depending on the MongoDB version.
+   [Manual reference](https://www.mongodb.com/docs/manual/reference/command/serverStatus/).
    
    **Returns**
    
@@ -289,6 +292,7 @@
    | `options`   | Key-value pairs of optional parameters specific to the command.
    
    Options are not checked for correctness.
+   [Manual reference](https://www.mongodb.com/docs/manual/reference/command/)
    
    **Returns**
    
@@ -335,7 +339,7 @@
    |                      | `:tertiary` Collation performs comparisons up to tertiary differences, such as case and letter variants. That is, collation performs comparisons of base characters (primary differences), diacritics (secondary differences), and case and variants (tertiary differences). Differences between base characters takes precedence over secondary differences, which takes precedence over tertiary differences. Default level.
    |                      | `:quaternary` Limited for specific use case to consider punctuation when levels 1-3 ignore punctuation or for processing Japanese text.
    
-   For more details, see the [manual page on collation](https://www.mongodb.com/docs/v5.3/reference/collation/).
+   [Manual reference](https://www.mongodb.com/docs/v5.3/reference/collation/)
 
    **Returns**
 
