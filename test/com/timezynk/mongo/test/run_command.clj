@@ -9,23 +9,24 @@
 
 (deftest server-status
   (testing "Number of fields returned"
-    (is (= 55
+    (is (= 56
            (count (keys (m/server-status))))))
   (testing "Filter data"
-    (is (= #{:service
-             :localTime
-             :uptimeEstimate
-             :uptime
-             :process
-             :operationTime
-             :uptimeMillis
-             :host
-             :pid
-             :ok
-             :version
-             :$clusterTime
+    (is (= #{:$clusterTime
              :asserts
-             :queues}
+             :host
+             :localTime
+             :ok
+             :operationTime
+             :pid
+             :process
+             :queues
+             :recoveryOplogApplier
+             :service
+             :uptime
+             :uptimeEstimate
+             :uptimeMillis
+             :version}
            (->> (m/server-status :asserts :queues)
                 keys
                 (into #{}))))))
