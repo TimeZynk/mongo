@@ -5,15 +5,10 @@
           Requires MongoDB version 5.0 or later."}
   (:refer-clojure :exclude [distinct])
   (:require
-   [clojure.java.io :as io]
    [com.timezynk.mongo.assert :refer [assert-keys]]
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database* *mongo-session* *mongo-types*]]
-   [com.timezynk.mongo.convert :refer [grid-fs-file->clj it->clj list->map]]
-   [com.timezynk.mongo.files.delete :refer [delete-file-method]]
-   [com.timezynk.mongo.files.download :refer [download-file-method]]
-   [com.timezynk.mongo.files.info :refer [file-info-method]]
-   [com.timezynk.mongo.files.upload :refer [upload-file-method]]
+   [com.timezynk.mongo.convert :refer [it->clj list->map]]
    [com.timezynk.mongo.guards :refer [catch-return *insert-guard* *replace-guard* *update-guard*]]
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
@@ -53,8 +48,6 @@
    | Parameter        | Description
    | ---              | ---
    | `uri`            | `string` Database location.
-   | `:retry-reads?`  | `optional boolean` Sets whether reads should be retried if they fail due to a network error.
-   | `:retry-writes?` | `optional boolean` Sets whether writes should be retried if they fail due to a network error.
    | `:read-concern`  | `optional keyword enum` Set read concern:
    |                  | `:available` The query returns data from the instance with no guarantee that the data has been written to a majority of the replica set members (i.e. may be rolled back).
    |                  | `:default` Sets the default concern, which is usually `local`
@@ -63,6 +56,8 @@
    |                  | `:majority` The query returns the data that has been acknowledged by a majority of the replica set members. The documents returned by the read operation are durable, even in the event of failure.
    |                  | `:snapshot` Returns majority-committed data as it appears across shards from a specific single point in time in the recent past.
    |                  | [Read more about read concerns](https://www.mongodb.com/docs/manual/reference/read-concern/).
+   | `:retry-reads?`  | `optional boolean` Sets whether reads should be retried if they fail due to a network error.
+   | `:retry-writes?` | `optional boolean` Sets whether writes should be retried if they fail due to a network error.
    | `:write-concern` | `optional keyword enum` Set write concern:
    |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default.
    |                  | `:journaled` Wait for the server to group commit to the journal file on disk.
@@ -371,7 +366,11 @@
       (it->clj)))
 
 (defn list-collection-names
-  "List keyworded names of all collections in database."
+  "List keyworded names of all collections in database.
+   
+   **Returns**
+   
+   A lazy sequence of keywords."
   {:added "1.0"}
   []
   (->> (list-collections-method)
@@ -395,16 +394,17 @@
 (defmacro create-collection!
   "Create collection.
    
-   | Parameter     | Description
-   | ---           | ---
-   | `collection`  | `keyword/string` Collection name.
-   | `:collation`  | `optional collation object` The collation of the collection.
-   | `:schema`     | `optional map` The schema validation map.
-   | `:validation` | `optional map` Validation logic outside of the schema.
-   | `:level`      | `optional keyword enum` Validaton level:
-   |               | `:strict` Apply validation rules to all inserts and all updates. Default value.
-   |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents.
-   |               | `:off` No validation for inserts or updates.
+   | Parameter       | Description
+   | ---             | ---
+   | `collection`    | `keyword/string` Collection name.
+   | `:collation`    | `optional collation object` The collation of the collection.
+   | `:full-change?` | `optional boolean` (>= v6.0) Change streams pass full documents. Default false.
+   | `:schema`       | `optional map` The schema validation map.
+   | `:validation`   | `optional map` Validation logic outside of the schema.
+   | `:level`        | `optional keyword enum` Validaton level:
+   |                 | `:strict` Apply validation rules to all inserts and all updates. Default value.
+   |                 | `:moderate` Applies validation rules to inserts and to updates on existing valid documents.
+   |                 | `:off` No validation for inserts or updates.
    
    **Returns**
    
@@ -421,26 +421,27 @@
                                                  {:name {:$exists 0} :address {:$ne nil}}]})
    ```"
   {:added "1.0"
-   :arglists '([<collection> & :collation <collation object> :level [:strict :moderate :off] :schema {} :validation {}])}
+   :arglists '([<collection> & :collation <collation object> :full-change? <boolean> :level [:strict :moderate :off] :schema {} :validation {}])}
   [coll & {:as options}]
-  (assert-keys options #{:collation :level :schema :validation})
+  (assert-keys options #{:collation :full-change? :level :schema :validation})
   `(create-collection-method (name ~coll) (collection-options ~options)))
 
 (defmacro modify-collection!
   "Make updates to a collection.
    
-   | Parameter     | Description
-   | ---           | ---
-   | `collection`  | `keyword/string` Collection name.
-   | `:name`       | `optional keyword/string` New name.
-   | `:collation`  | `optional collation object` The collation of the collection.
-   | `:schema`     | `optional map` The schema validation map.
-   | `:validation` | `optional map` Validation logic outside of the schema.
-   | `:level`      | `optional keyword enum` Validation level:
-   |               | `:strict` Apply validation rules to all inserts and all updates. Default value.
-   |               | `:moderate` Applies validation rules to inserts and to updates on existing valid documents.
-   |               | `:off` No validation for inserts or updates.
-   | `:validate?`  | `optional boolean` Ensure that existing documents in the collection conform to the new schema or validation. Default `false`.
+   | Parameter       | Description
+   | ---             | ---
+   | `collection`    | `keyword/string` Collection name.
+   | `:name`         | `optional keyword/string` New name.
+   | `:collation`    | `optional collation object` The collation of the collection.
+   | `:full-change?` | `optional boolean` (>= v6.0) Change streams pass full documents. Default false.
+   | `:schema`       | `optional map` The schema validation map.
+   | `:validation`   | `optional map` Validation logic outside of the schema.
+   | `:level`        | `optional keyword enum` Validation level:
+   |                 | `:strict` Apply validation rules to all inserts and all updates. Default value.
+   |                 | `:moderate` Applies validation rules to inserts and to updates on existing valid documents.
+   |                 | `:off` No validation for inserts or updates.
+   | `:validate?`    | `optional boolean` Ensure that existing documents in the collection conform to the new schema or validation. Default `false`.
    
    **Returns**
    
@@ -452,9 +453,9 @@
    (modify-collection! :coll :name :coll-2)
    ```"
   {:added "1.0"
-   :arglists '([<collection> & :collation <collation object> :level [:strict :moderate :off] :name <new name> :schema {} :validation {}])}
+   :arglists '([<collection> & :collation <collation object> :full-change? <boolean> :level [:strict :moderate :off] :name <new name> :schema {} :validation {}])}
   [coll & {:as options}]
-  (assert-keys options #{:collation :level :name :schema :validate? :validation})
+  (assert-keys options #{:collation :full-change? :level :name :schema :validate? :validation})
   `(modify-collection-method ~coll ~options))
 
 (defn drop-collection!
@@ -484,8 +485,8 @@
    | `keys`         | `map/list(keyword/string)` A document or a list of keywords or strings.
    | `:collation`   | `optional collation object` Collation of index.
    | `:background?` | `optional boolean` Create the index in the background. Default `false`.
-   | `:name`        | `optional string` A custom name for the index.
    | `:filter`      | `optional map` A partial-filter-expression for the index.
+   | `:name`        | `optional string` A custom name for the index.
    | `:sparse?`     | `optional boolean` Don't index null values. Default `false`.
    | `:unique?`     | `optional boolean` Index values must be unique. Default `false`.
    
@@ -551,11 +552,12 @@
    :arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
   ([coll] `(fetch ~coll {}))
-  ([coll query & {:as options}] (assert-keys options #{:collation :limit :only :skip :sort})
-                                `(-> (fetch-method (h/get-collection ~coll)
-                                                   (->bson ~query)
-                                                   ~options)
-                                     (it->clj))))
+  ([coll query & {:as options}]
+   (assert-keys options #{:collation :limit :only :skip :sort})
+   `(-> (fetch-method (h/get-collection ~coll)
+                      (->bson ~query)
+                      ~options)
+        (it->clj))))
 
 (defmacro fetch-one
   "Return only the first document retrieved.
@@ -576,12 +578,13 @@
    :arglists '([<collection>]
                [<collection> <query> & :collation <collation object> :only {} :skip <count> :sort {}])}
   ([coll] `(fetch-one ~coll {}))
-  ([coll query & {:as options}] (assert-keys options #{:collation :only :skip :sort})
-                                `(-> (fetch-method (h/get-collection ~coll)
-                                                   (->bson ~query)
-                                                   (assoc ~options :limit 1))
-                                     (it->clj)
-                                     (first))))
+  ([coll query & {:as options}]
+   (assert-keys options #{:collation :only :skip :sort})
+   `(-> (fetch-method (h/get-collection ~coll)
+                      (->bson ~query)
+                      (assoc ~options :limit 1))
+        (it->clj)
+        (first))))
 
 (defmacro fetch-by-id
   "Fetch a single document by its id.
@@ -652,12 +655,13 @@
    :arglists '([<collection> <field>]
                [<collection> <field> <query> & :validate? <boolean>])}
   ([coll field] `(distinct ~coll ~field {}))
-  ([coll field query & {:as options}] (assert-keys options #{:validate?})
-                                      `(-> (distinct-method ~coll
-                                                            (name ~field)
-                                                            (->bson ~query)
-                                                            ~options)
-                                           (it->clj))))
+  ([coll field query & {:as options}]
+   (assert-keys options #{:validate?})
+   `(-> (distinct-method ~coll
+                         (name ~field)
+                         (->bson ~query)
+                         ~options)
+        (it->clj))))
 
 ; ------------------------
 ; Insert
@@ -719,9 +723,9 @@
    | `collection` | `keyword/string` The collection.
    | `query`      | `map` A standard MongoDB query.
    | `update`     | `map` A valid update document.
-   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
    | `:collation` | `optional collation object` Collation used.
    | `:hint`      | `optional map/list` Indexing hint.
+   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
    
    **Returns**
 
@@ -778,9 +782,9 @@
    | `collection` | `keyword/string` The collection.
    | `query`      | `map` A standard MongoDB query.
    | `update`     | `map/list` A valid update document or pipeline.
-   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
    | `:collation` | `optional collation object` Collation used.
    | `:hint`      | `optional map/list` Indexing hint.
+   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
    
    **Returns**
    
@@ -861,11 +865,11 @@
    | `collection`   | `keyword/string` The collection.
    | `query`        | `map` A standard MongoDB query.
    | `:return-new?` | `optional boolean` Return the updated document? Default if `false`.
-   | `:upsert?`     | `optional boolean` If no document is found, create a new one. Default is `false`.
    | `:collation`   | `optional collation object` Collation used.
    | `:only`        | `optional map` A MongoDB map of fields to include or exclude.
    | `:hint`        | `optional map` Indexing hint.
    | `:sort`        | `optional map` A MongoDB map of sorting criteria.
+   | `:upsert?`     | `optional boolean` If no document is found, create a new one. Default is `false`.
 
    **Returns**
 
@@ -937,9 +941,9 @@
    | `collection` | `keyword/string` The collection.
    | `query`      | `map` A standard MongoDB query.
    | `document`   | `map` The new document.
-   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
    | `:collation` | `optional collation object` Collation used.
    | `:hint`      | `optional map` Indexing hint.
+   | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
 
    **Returns**
 
@@ -1130,67 +1134,3 @@
   (-> (aggregate-method (h/get-collection coll)
                         (map ->bson pipeline))
       (it->clj)))
-
-; ------------------------
-; Files
-; ------------------------
-
-(defmacro file-info
-  "Fetch files.
-   
-   | Parameter    | Description
-   | ---          | ---
-   | `bucket`     | `keyword/string/nil` The bucket name. Can be nil to get the default database bucket.
-   | `query`      | `map` A standard MongoDB query.
-   | `:collation` | `optional collation object` Collation used.
-   | `:limit`     | `optional integer` Number of documents to fetch.
-   | `:skip`      | `optional integer` Number of documents to skip before fetching.
-   | `:sort`      | `optional map/list` A map/list of sorting criteria.
-   
-   **Returns**
-
-   A lazy sequence of matching documents."
-  {:added "1.0"
-   :arglists '([]
-               [<bucket>]
-               [<bucket> <query> & :collation <collation object> :limit <count> :only {} :skip <count> :sort {}])}
-  ([] `(file-info nil {}))
-  ([bucket] `(file-info ~bucket {}))
-  ([bucket query & {:as options}] (assert-keys options #{:collation :limit :skip :sort})
-                                  `(->> (file-info-method (h/get-filebucket ~bucket)
-                                                          (->bson ~query)
-                                                          ~options)
-                                        (it->clj)
-                                        (map grid-fs-file->clj))))
-
-(defmacro download-file
-  {:added "1.0"}
-  [bucket file & {:as options}]
-  (assert-keys options #{:revision})
-  `(with-open [stream# (io/output-stream ~file)]
-     (download-file-method (h/get-filebucket ~bucket)
-                           ~file
-                           stream#
-                           ~options)))
-
-(defmacro upload-file!
-  {:added "1.0"}
-  [bucket file & {:as options}]
-  (assert-keys options #{:metadata})
-  `(with-open [stream# (io/input-stream ~file)]
-     (upload-file-method (h/get-filebucket ~bucket)
-                         (if (= String (type ~file))
-                           ~file
-                           (apply str "File_" (repeatedly 20 #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
-                         stream#
-                         ~options)))
-
-(defmacro delete-file!
-  {:added "1.0"}
-  ([id]        `(delete-file! nil ~id))
-  ([bucket id] `(delete-file-method (h/get-filebucket ~bucket)
-                                    ~id)))
-
-;; (defn modify-bucket! [])
-
-;; (defn drop-bucket! [])

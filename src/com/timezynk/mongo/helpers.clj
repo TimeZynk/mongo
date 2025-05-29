@@ -26,14 +26,3 @@
   `(if ~bucket
      (GridFSBuckets/create *mongo-database* (name ~bucket))
      (GridFSBuckets/create *mongo-database*)))
-
-#_(defprotocol ToObjectId
-    (->object-id [v]))
-
-#_(extend-protocol ToObjectId
-    String
-    (->object-id [s]
-      (ObjectId. s))
-
-    ObjectId
-    (->object-id [o] o))

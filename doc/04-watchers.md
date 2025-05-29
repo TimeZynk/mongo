@@ -1,19 +1,19 @@
-# Triggers
+# Watchers
 
-Also known as *listeners* or *watchers*, these functions allow you to monitor collection activity; Each time a document is inserted, updated, or deleted, a call-back function is invoked.
+Also known as *listeners* or *triggers*, these functions allow you to monitor collection activity; Each time a document is inserted, updated, replaced, or deleted, a call-back function is invoked.
 
 ```clojure
 (require '[clojure.tools.logging :as log])
 (require '[com.timezynk.mongo.watch :as w])
 
-(defn insert-fn [time doc]
+(defn insert-fn [coll time doc]
   (log/spy time)
   (log/spy doc))
 
 (w/on-insert :coll insert-fn)
 ```
 
-Each of the three trigger functions &ndash; `on-insert`, `on-update`, `on-delete` &ndash; accepts a call-back function that must take two parameters:
+Each of the th trigger functions &ndash; `on-insert`, `on-update`, `on-replace`, `on-delete` &ndash; accepts a call-back function that must take two parameters:
 
 * `time` Operation time, expressed as a `java.util.Date` object.
 * `doc` A map containing either:

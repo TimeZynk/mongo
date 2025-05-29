@@ -1,8 +1,6 @@
 # Type Conversion
 
-
-[text](https://www.mongodb.com/docs/drivers/java/sync/current/fundamentals/data-formats/codecs/)
-
+[MongoDB codecs](https://www.mongodb.com/docs/drivers/java/sync/current/fundamentals/data-formats/codecs/)
 
 Clojure and MongoDB handle types differently. Converting between different types is handled using *codecs*. MongoDB types are declared internally using the `org.bson.BsonType` enum class. Each is matched to a codec that handles one or many external types:
 
@@ -40,7 +38,7 @@ An array retrieved **from** MongoDB is converted to PersistentVector.
 
 #### BINARY
 
-Handles binary data types, byte arrays and suchlike. There are different sub-types, most notably MD5-hashes and UUIDs, but the only sub-type that has a meaningful representation is UUID, which will be converted to and from `java.util.UUID`. The rest are usually represented as `bytes[]`, and will be handled as such.
+Handles binary data types, byte arrays and suchlike. There are different sub-types, most notably MD5-hashes and UUIDs, but the only sub-type that has a meaningful representation is UUID, which will be converted to and from `java.util.UUID`. The rest are usually represented as `byte[]`, and will be handled as such.
 
 #### BOOLEAN
 
@@ -96,7 +94,7 @@ MongoDB timestamps are only intended for internal use. Besides, Clojure doesn't 
 
 #### UNDEFINED
 
-MongoDB undefined values are even more intended only for internal use, since reading an undefined value returns null. Consequently, undefined values are both written and read as nil.
+MongoDB undefined values are even more intended only for internal use, since reading an undefined value returns null. Consequently, undefined values are both written and read as `nil`.
 
 ## Define a custom codec
 
@@ -119,7 +117,7 @@ MongoDB expects a `java.util.Date` object for storing date-time values. This cla
     (decode [_this reader _decoder-context]
       (-> (.readDatetime reader)
           (java.time.Instant/ofEpochMilli)
-          (.to)))
+          (java.time.LocalDateTime/from)))
     
     (encode [_this writer value _encoder-context]
       (->> (java.time.Instant/from value)

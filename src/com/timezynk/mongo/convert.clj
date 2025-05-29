@@ -20,35 +20,41 @@
   (list->map [v]))
 
 (extend-protocol Convert
-  PersistentArrayMap
-  (list->map [v] v) ; Already a map.
-
   PersistentVector
   (list->map [l]
     (->> (repeat 1)
          (interleave l)
-         (apply assoc {}))))
+         (apply assoc {})))
 
-(defn grid-fs-file->clj [^GridFSFile file]
+  PersistentArrayMap
+  (list->map [v] v))
+
+(defn decode-bson-document [doc]
   (let [codec   (map-codec (.getCodecRegistry *mongo-database*))
         context (.build (DecoderContext/builder))]
-    {:chunk-size (.getChunkSize file)
-     :file-name  (.getFilename  file)
-     :_id        (.getObjectId  file)
-     :length     (.getLength    file)
-     :metadata
-     (when-let [metadata (.getMetadata file)]
-       (.decode codec
-                (-> (BsonDocumentWrapper/asBsonDocument metadata
-                                                        (CodecRegistries/fromCodecs [(DocumentCodec.)]))
-                    (.asBsonReader))
-                context))
-     :upload-date
-     (:a (.decode codec
-                  (-> (.append (BsonDocument.)
-                               "a"
-                               (-> (.getUploadDate file)
-                                   (.getTime)
-                                   (BsonDateTime.)))
-                      (.asBsonReader))
-                  context))}))
+    (.decode codec
+             (.asBsonReader doc)
+             context)))
+
+(defn decode-document [doc]
+  (->> (CodecRegistries/fromCodecs [(DocumentCodec.)])
+       (BsonDocumentWrapper/asBsonDocument doc)
+       (decode-bson-document)))
+
+(defn decode-bson-value [v]
+  (-> (.append (BsonDocument.)
+               "v" v)
+      (decode-bson-document)
+      (:v)))
+
+(defn file->clj [^GridFSFile file]
+  {:chunk-size (.getChunkSize file)
+   :file-name  (.getFilename  file)
+   :_id        (.getObjectId  file)
+   :length     (.getLength    file)
+   :metadata   (when-let [metadata (.getMetadata file)]
+                 (decode-document metadata))
+   :upload-date (-> (.getUploadDate file)
+                    (.getTime)
+                    (BsonDateTime.)
+                    (decode-bson-value))})

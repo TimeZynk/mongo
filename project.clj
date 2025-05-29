@@ -10,10 +10,11 @@
                  [ch.qos.logback.contrib/logback-jackson "0.1.5"]
                  [ch.qos.logback.contrib/logback-json-classic "0.1.5"]
                  [org.apache.logging.log4j/log4j-to-slf4j "2.17.0"]
-                 [org.clojure/clojure "1.10.3"]
+                 [org.clojure/clojure "1.11.1"]
                  [org.clojure/core.async "1.3.618"]
                  [org.clojure/tools.logging "1.2.4"]
-                 [org.mongodb/mongodb-driver-sync "5.0.1"]]
+                 [org.mongodb/mongodb-driver-sync "5.0.1"]
+                 [tortue/spy "2.15.0"]]
   :repl-options {:init-ns com.timezynk.mongo}
   :test-paths   ["test"]
   :plugins      [[com.github.clj-kondo/lein-clj-kondo "0.2.1"]

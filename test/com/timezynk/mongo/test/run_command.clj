@@ -13,6 +13,7 @@
            (count (keys (m/server-status))))))
   (testing "Filter data"
     (is (= #{:$clusterTime
+             :activeIndexBuilds
              :asserts
              :host
              :localTime
@@ -28,7 +29,7 @@
              :uptimeEstimate
              :uptimeMillis
              :version}
-           (->> (m/server-status :asserts :queues)
+           (->> (m/server-status :asserts)
                 keys
                 (into #{}))))))
 

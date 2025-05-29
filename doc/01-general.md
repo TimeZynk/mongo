@@ -1,6 +1,6 @@
 # The Timezynk/mongo wrapper
 
-This is a Clojure wrapper utilizing the modern (as of 2022), synchronous java API driver for MongoDB.
+This is a Clojure wrapper utilizing the modern, synchronous java API driver for MongoDB.
 
 ## Installation
 
@@ -10,7 +10,7 @@ The intended way of use is to add the clojar to your `project.clj` file:
  :dependencies [[com.timezynk/mongo "0.10.3"]]
 ```
 
-In order for all API function calls to work properly, you need to have at least MongoDB version 4.4 installed. It is recommended that you have version 5.0 installed because it improves significantly exception messages.
+In order for all API function calls to work properly, you need to have at least MongoDB version 4.4 installed. It is recommended that you have version 5.0 installed because it significantly improves exception messages.
 
 ## Connecting to MongoDB
 

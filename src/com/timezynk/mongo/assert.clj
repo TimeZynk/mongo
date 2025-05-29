@@ -25,7 +25,7 @@
     0
     (catch Compiler$CompilerException e
       (if (re-find #"Function call contains invalid key"
-                   (.getMessage (.getCause e)))
+                   (-> e .getCause .getMessage))
         1
         -1))
     (catch Exception _e

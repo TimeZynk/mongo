@@ -1,4 +1,4 @@
-(ns ^:no-doc com.timezynk.mongo.files.info
+(ns ^:no-doc com.timezynk.mongo.file-methods.info
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
@@ -13,21 +13,21 @@
     skip      (.skip skip)
     sort      (.sort (->bson (list->map sort)))))
 
-(defmulti file-info-method
+(defmulti info-method
   (fn [^GridFSBucket _bucket ^Bson _query options]
     {:session (some? *mongo-session*)
      :options (coll? options)}))
 
-(defmethod file-info-method {:session true :options true} [bucket query options]
+(defmethod info-method {:session true :options true} [bucket query options]
   (-> (.find bucket *mongo-session* query)
       (with-options options)))
 
-(defmethod file-info-method {:session true :options false} [bucket query _options]
+(defmethod info-method {:session true :options false} [bucket query _options]
   (.find bucket *mongo-session* query))
 
-(defmethod file-info-method {:session false :options true} [bucket query options]
+(defmethod info-method {:session false :options true} [bucket query options]
   (-> (.find bucket query)
       (with-options options)))
 
-(defmethod file-info-method {:session false :options false} [bucket query _options]
+(defmethod info-method {:session false :options false} [bucket query _options]
   (.find bucket query))

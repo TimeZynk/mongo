@@ -7,7 +7,9 @@
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
    [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]])
-  (:import [com.mongodb MongoClientException MongoCommandException]))
+  (:import [clojure.lang Keyword Symbol]
+           [com.mongodb MongoClientException MongoCommandException]
+           [org.bson.types ObjectId]))
 
 ; ------------------------
 ; Persistent binding
@@ -27,7 +29,7 @@
   (reset! mongo-uri {:uri uri
                      :options options}))
 
-(def ^:private connection-map
+(def ^:no-doc ^:private connection-map
   (atom {}))
 
 (defn ^:no-doc upsert-connection []
@@ -102,3 +104,31 @@
     (create-collection-method (name coll) (collection-options options))
     (catch MongoCommandException _e
       (modify-collection-method coll options))))
+
+; ------------------------
+; ObjectId
+; ------------------------
+
+(defprotocol ToObjectId
+  "Convert to ObjectId."
+  :added "1.0"
+  (->object-id [v]))
+
+(extend-protocol ToObjectId
+  Keyword
+  (->object-id [k]
+    (ObjectId. (name k)))
+
+  String
+  (->object-id [s]
+    (ObjectId. s))
+
+  Symbol
+  (->object-id [s]
+    (ObjectId. (name s)))
+
+  ObjectId
+  (->object-id [o] o)
+
+  nil
+  (->object-id [_] nil))
