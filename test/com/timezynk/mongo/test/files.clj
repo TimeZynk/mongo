@@ -23,31 +23,38 @@
     (getEncoderClass [_this]
       Date)))
 
-(deftest file
+(deftest upload-download
   (let [file-name "temp.bin"]
     (try
-      (let [file "ABCDEFGHIJ"
-            _    (spit file-name file)
-            id   (mf/upload! nil file-name :metadata {:a "Hey"})
-            _    (is (= ObjectId (type id)))
-            info (first (mf/info))]
-        (testing "Upload a file and fetch the file info"
-          (are [a b] (= a (b info))
-            261120     :chunk-size
-            file-name  :file-name
-            id         :_id
-            10         :length
-            {:a "Hey"} :metadata))
-        (testing "Check that default datetime decoder is used"
-          (is (= Date (-> info :upload-date type))))
-        (testing "Use a different datetime decoder"
-          (m/with-codecs [(datetime-codec)]
-                         {}
-            (let [info (first (mf/info))]
-              (is (= Long (-> info :upload-date type))))))
+      (let [file    "ABCDEFGHIJ"
+            _       (spit file-name file)
+            db-file (mf/random-filename)
+            id      (mf/upload! nil file-name db-file)]
+        (is (= ObjectId (type id)))
         (delete-file file-name)
         (testing "Download by file-name"
-          (mf/download! nil file-name)
+          (mf/download! nil db-file file-name)
           (is (= file (slurp file-name)))))
       (finally
         (delete-file file-name :silently)))))
+
+(deftest file-info
+  (let [str-1   "ABCDEFGHIJ"
+        str-2   "KLMNOPQRST"
+        id      (mf/insert! :bucket (.getBytes str-1) "file-1" :metadata {:a "Hey"})
+        info    (mf/info-one :bucket {})]
+    (testing "Upload a byte array and fetch the file info"
+      (is (= {:chunk-size 261120
+              :file-name  "file-1"
+              :_id        id
+              :length     10
+              :metadata   {:a "Hey"}}
+             (dissoc info :upload-date))))
+    (testing "Check that default datetime decoder is used"
+      (is (= Date (-> info :upload-date type))))
+    (testing "Use a different datetime decoder"
+      (m/with-codecs [(datetime-codec)]
+                     {}
+        (let [info (mf/info-one :bucket {})]
+          (is (= Long (-> info :upload-date type))))))
+    ()))

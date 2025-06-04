@@ -25,9 +25,7 @@
     (some? *mongo-session*)))
 
 (defmethod create-collection-method true [coll options]
-  {:pre [coll]}
   (.createCollection *mongo-database* *mongo-session* coll options))
 
 (defmethod create-collection-method false [coll options]
-  {:pre [coll]}
   (.createCollection *mongo-database* coll options))
