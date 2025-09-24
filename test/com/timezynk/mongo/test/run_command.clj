@@ -9,7 +9,7 @@
 
 (deftest server-status
   (testing "Number of fields returned"
-    (is (= 56
+    (is (= 57
            (count (keys (m/server-status))))))
   (testing "Filter data"
     (is (= #{:$clusterTime
@@ -20,6 +20,7 @@
              :operationTime
              :pid
              :process
+             :profiler
              :queues
              :recoveryOplogApplier
              :service
