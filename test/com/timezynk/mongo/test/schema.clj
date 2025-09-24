@@ -221,3 +221,54 @@
             :validationLevel "strict"
             :validationAction "error"}
            (:options (m/collection-info :users))))))
+
+(deftest descriptions
+  (m/create-collection! :users :schema {:id   (s/id :optional? true :description "`id` must be ObjectId")
+                                        :str  (s/string :optional? true :description "`str` must be string")
+                                        :num  (s/number :optional? true :description "`num` must be number")
+                                        :int  (s/integer :optional? true :description "`int` must be integer")
+                                        :ts   (s/timestamp :optional? true :description "`ts` must be timestamp")
+                                        :bool (s/boolean :optional? true :description "`bool` must be boolean")
+                                        :dt   (s/date-time :optional? true :description "`dt` must be date-time")
+                                        :map  (s/map {:a (s/integer)} :optional? true :description "`map` must be map")
+                                        :arr  (s/array (s/integer) :optional? true :description "`arr` must be array")})
+  (testing "Invalid id"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`id` must be ObjectId\""
+                          (m/insert! :users {:id "A"}))))
+  (testing "Invalid string"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`str` must be string\""
+                          (m/insert! :users {:str 1}))))
+  (testing "Invalid number"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`num` must be number\""
+                          (m/insert! :users {:num "1"}))))
+  (testing "Invalid integer"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`int` must be integer\""
+                          (m/insert! :users {:int 1.23}))))
+  (testing "Invalid timestamp"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`ts` must be timestamp\""
+                          (m/insert! :users {:ts -1}))))
+  (testing "Invalid boolean"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`bool` must be boolean\""
+                          (m/insert! :users {:bool 1}))))
+  (testing "Invalid date-time"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`dt` must be date-time\""
+                          (m/insert! :users {:dt 1000}))))
+  (testing "Invalid map"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`map` must be map\""
+                          (m/insert! :users {:map {:a "1"}}))))
+  (testing "Invalid map"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`map` must be map\""
+                          (m/insert! :users {:map {:a "1"}}))))
+  (testing "Invalid array"
+    (is (thrown-with-msg? MongoWriteException
+                          #"\"description\": \"`arr` must be array\""
+                          (m/insert! :users {:arr ["1"]})))))

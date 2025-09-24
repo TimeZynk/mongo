@@ -382,10 +382,11 @@
 (defn collection-info
   "List full info of collection.
    
-   | Parameter | Description
-   | ---       | ---
-   | `name`    | `keyword/string` Collection name."
-  {:added "1.0"}
+   | Parameter    | Description
+   | ---          | ---
+   | `collection` | `keyword/string` Collection name."
+  {:added "1.0"
+   :arglists '([<collection>])}
   [coll]
   (->> (list-collections)
        (filter #(= (name coll) (:name %)))
@@ -396,7 +397,7 @@
    
    | Parameter     | Description
    | ---           | ---
-   | `name`        | `keyword/string` Collection name.
+   | `collection`  | `keyword/string` Collection name.
    | `:collation`  | `optional collation object` The collation of the collection.
    | `:schema`     | `optional map` The schema validation map.
    | `:validation` | `optional map` Validation logic outside of the schema.
@@ -420,7 +421,7 @@
                                                  {:name {:$exists 0} :address {:$ne nil}}]})
    ```"
   {:added "1.0"
-   :arglists '([<name> & :collation <collation object> :level [:strict :moderate :off] :schema {} :validation {}])}
+   :arglists '([<collection> & :collation <collation object> :level [:strict :moderate :off] :schema {} :validation {}])}
   [coll & {:as options}]
   (assert-keys options #{:collation :level :schema :validation})
   `(create-collection-method (name ~coll) (collection-options ~options)))
@@ -430,7 +431,7 @@
    
    | Parameter     | Description
    | ---           | ---
-   | `name`        | `keyword/string` Collection name.
+   | `collection`  | `keyword/string` Collection name.
    | `:name`       | `optional keyword/string` New name.
    | `:collation`  | `optional collation object` The collation of the collection.
    | `:schema`     | `optional map` The schema validation map.
@@ -451,13 +452,14 @@
    (modify-collection! :coll :name :coll-2)
    ```"
   {:added "1.0"
-   :arglists '([<name> & :collation <collation object> :level [:strict :moderate :off] :name <new name> :schema {} :validation {}])}
+   :arglists '([<collection> & :collation <collation object> :level [:strict :moderate :off] :name <new name> :schema {} :validation {}])}
   [coll & {:as options}]
   (assert-keys options #{:collation :level :name :schema :validate? :validation})
   `(modify-collection-method ~coll ~options))
 
 (defn drop-collection!
-  {:added "1.0"}
+  {:added "1.0"
+   :arglists '([<collection>])}
   [coll]
   {:pre [coll]}
   (drop-collection-method (h/get-collection coll)))
@@ -467,7 +469,8 @@
 ; ------------------------
 
 (defn list-indexes
-  {:added "1.0"}
+  {:added "1.0"
+   :arglists '([<collection>])}
   [coll]
   (-> (.listIndexes (h/get-collection coll) PersistentArrayMap)
       (it->clj)))
@@ -511,7 +514,8 @@
                         ~options))
 
 (defn drop-index!
-  {:added "1.0"}
+  {:added "1.0"
+   :arglists '([<collection> <index name>])}
   [coll index]
   (drop-index-method (h/get-collection coll)
                      index))
@@ -693,7 +697,8 @@
 (defmacro insert-one!
   "This is identical to `insert!`, except if payload is nil, return nil instead of throwing exception.
    Use this function when the payload is expected to be a nil-able document."
-  {:added "1.0"}
+  {:added "1.0"
+   :arglists '([<collection> <document>])}
   [coll doc]
   `(when ~doc
      (catch-return
@@ -876,7 +881,7 @@
                                   (->bson ~update)
                                   (fetch-and-update-options ~options)))))
 
-(defn fetch-and-update-by-id!
+(defmacro fetch-and-update-by-id!
   {:added "1.0"}
   [coll id update & {:as options}]
   (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
@@ -1016,7 +1021,7 @@
                       (delete-options ~options))
        (delete-result)))
 
-(defn delete-one!
+(defmacro delete-one!
   "Delete first matching document.
    
    | Parameter    | Description
@@ -1034,32 +1039,36 @@
   {:added "1.0"
    :arglists '([<collection> <query> & :collation <collation object> :hint {}])}
   [coll query & {:as options}]
-  (-> (h/get-collection coll)
-      (delete-one-method (->bson query)
-                         (delete-options options))
-      (delete-result)))
+  (assert-keys options #{:collation :hint})
+  `(-> (h/get-collection ~coll)
+       (delete-one-method (->bson ~query)
+                          (delete-options ~options))
+       (delete-result)))
 
-(defn delete-by-id!
+(defmacro delete-by-id!
   {:added "1.0"}
-  [coll id & options]
-  (-> (delete-one-method (h/get-collection coll)
-                         (->bson {:_id id})
-                         (delete-options options))
-      (delete-result)))
+  [coll id & {:as options}]
+  (assert-keys options #{:collation :hint})
+  `(-> (delete-one-method (h/get-collection ~coll)
+                          (->bson {:_id ~id})
+                          (delete-options ~options))
+       (delete-result)))
 
-(defn fetch-and-delete-one!
+(defmacro fetch-and-delete-one!
   {:added "1.0"}
-  [coll query & options]
-  (fetch-and-delete-method (h/get-collection coll)
-                           (->bson query)
-                           (fetch-and-delete-options options)))
+  [coll query & {:as options}]
+  (assert-keys options #{:collation :hint})
+  `(fetch-and-delete-method (h/get-collection ~coll)
+                            (->bson ~query)
+                            (fetch-and-delete-options ~options)))
 
-(defn fetch-and-delete-by-id!
+(defmacro fetch-and-delete-by-id!
   {:added "1.0"}
-  [coll id & options]
-  (fetch-and-delete-method (h/get-collection coll)
-                           (->bson {:_id id})
-                           (fetch-and-delete-options options)))
+  [coll id & {:as options}]
+  (assert-keys options #{:collation :hint})
+  `(fetch-and-delete-method (h/get-collection ~coll)
+                            (->bson {:_id ~id})
+                            (fetch-and-delete-options ~options)))
 
 ; ------------------------
 ; Transaction
@@ -1087,9 +1096,6 @@
      (try
        (.withTransaction *mongo-session*
                          (reify TransactionBody (execute [_this] ~@body)))
-       ;(.startTransaction *mongo-session*)
-       ;~@body
-       ;(.commitTransaction *mongo-session*)
        (finally
          (.close *mongo-session*)))))
 
