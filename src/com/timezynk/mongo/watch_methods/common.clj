@@ -10,15 +10,15 @@
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb MongoChangeStreamException]
            [com.mongodb.client ChangeStreamIterable MongoCollection MongoCursor MongoIterable]
-           [com.mongodb.client.model.changestream FullDocument FullDocumentBeforeChange]
+           [com.mongodb.client.model.changestream FullDocument FullDocumentBeforeChange UpdateDescription]
            [java.lang IllegalStateException]
            [org.bson BsonDateTime BsonDocument]
            [org.bson.conversions Bson]))
 
-(def ^:const DELETE  "delete")
-(def ^:const INSERT  "insert")
-(def ^:const REPLACE "replace")
-(def ^:const UPDATE  "update")
+(def ^:const DELETE  :delete)
+(def ^:const INSERT  :insert)
+(def ^:const REPLACE :replace)
+(def ^:const UPDATE  :update)
 
 (defn check-full [coll full? op-type]
   (when (and coll
@@ -37,10 +37,10 @@
 
 (defn- pipeline [op-type {:keys [filter]}]
   (case op-type
-    "delete"  (build-pipeline op-type nil nil)
-    "insert"  (build-pipeline op-type filter "fullDocument.")
-    "replace" (build-pipeline op-type filter "fullDocument.")
-    "update"  (build-pipeline op-type filter "updateDescription.updatedFields.")))
+    :delete  (build-pipeline op-type nil nil)
+    :insert  (build-pipeline op-type filter "fullDocument.")
+    :replace (build-pipeline op-type filter "fullDocument.")
+    :update  (build-pipeline op-type filter "updateDescription.updatedFields.")))
 
 (defmulti watch-method ^MongoIterable
   (fn [_obj ^String _op-type _options]
@@ -78,6 +78,17 @@
 (defn get-id [event]
   (-> ^BsonDocument (.getDocumentKey event)
       (convert/decode-bson-document)))
+
+(defn get-collection [event]
+  (-> (.getNamespace event)
+      (.getCollectionName)
+      (keyword)))
+
+(defn get-delta [event]
+  (merge (get-id event)
+         (-> ^UpdateDescription (.getUpdateDescription event)
+             ^BsonDocument (.getUpdatedFields)
+             (convert/decode-bson-document))))
 
 (defn handle-exception [e text]
   (if (= (.getMessage e)

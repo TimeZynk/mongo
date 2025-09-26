@@ -7,6 +7,10 @@
    [com.timezynk.mongo.watch-methods.replace :refer [on-replace-method]]
    [com.timezynk.mongo.watch-methods.update :refer [on-update-method]]))
 
+; ------------------------
+; Watch
+; ------------------------
+
 (defmacro on-insert
   "Listen for an `insert!` event.
    
@@ -15,11 +19,15 @@
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
    | `callback function` | `function` A callback function that accepts three parameters:
    |                     | `keyword` The affected collection.
-   |                     | `java.util.Date` Time of event.
+   |                     | `java.util.Date/custom` Time of event, codec-dependent format.
    |                     | `map` The inserted document.
    | `:collation`        | `optional collation object` Collation used.
    | `:filter`           | `optional map` Filter query.
    
+   **Returns**
+
+   Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
+
    **Examples**
    
    ```clojure
@@ -43,13 +51,17 @@
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
    | `callback function` | `function` A callback function that accepts three or four parameters:
    |                     | `keyword` The affected collection.
-   |                     | `java.util.Date` Time of event.
+   |                     | `java.util.Date/custom` Time of event, codec-dependent format.
    |                     | `map` Document with changed fields.
    |                     | `optional map` Old document before changes.
    | `:collation`        | `optional collation object` Collation used.
    | `:filter`           | `optional map` Filter query.
    | `:full?`            | `optional boolean` (>= v6.0) Return complete documents after and before change.
    
+   **Returns**
+
+   Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
+
    **Examples**
    
    ```clojure
@@ -72,13 +84,17 @@
    | ---                 | ---
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
    | `callback function` | `function` A callback function that accepts three or four parameters:
-   |                     | `java.util.Date` Time of event.
+   |                     | `java.util.Date/custom` Time of event, codec-dependent format.
    |                     | `map` The new document.
    |                     | `optional map` The replaced document.
    | `:collation`        | `optional collation object` Collation used.
    | `:filter`           | `optional map` Filter query.
    | `:full?`            | `optional boolean` (>= v6.0) Return complete documents after and before change.
    
+   **Returns**
+
+   Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
+
    **Examples**
    
    ```clojure
@@ -101,10 +117,14 @@
    | ---                 | ---
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
    | `callback function` | `function` A callback function that accepts three parameters:
-   |                     | `java.util.Date` Time of event.
+   |                     | `java.util.Date/custom` Time of event, codec-dependent format.
    |                     | `map` Contains either a single `_id` field with the id of the deleted document, or the entire deleted document.
    | `:full?`            | `optional boolean` (>= v6.0) Return complete deleted document.
    
+   **Returns**
+
+   Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
+
    **Examples**
    
    ```clojure

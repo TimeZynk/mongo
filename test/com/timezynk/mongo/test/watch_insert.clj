@@ -3,6 +3,7 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.watch :as w]
+   [com.timezynk.mongo.watch-methods.config :as config]
    [com.timezynk.mongo.test.utils.db-utils :as dbu]
    [com.timezynk.mongo.test.utils.watch :as wu]
    [spy.core :as spy])
@@ -31,6 +32,27 @@
                                 (and (= Date (type time))
                                      (= id-2 _id)
                                      (= "Name2" name))))))))
+
+(deftest double-watch
+  (testing "Adding two identical watchers only adds one"
+    (m/create-collection! :coll)
+    (is (w/on-insert :coll wu/on-watch))
+    (is (not (w/on-insert :coll wu/on-watch)))
+    (m/insert! :coll {:name "Name1"})
+    (Thread/sleep 200)
+    (is (spy/called-once? wu/on-watch))))
+
+(deftest double-connection
+  (testing "Watcher id for connection should be preserved"
+    (let [ids #'config/watch-ids]
+      (w/on-insert :coll wu/on-watch)
+      (is (= 1 (count @@ids)))
+      (let [id (first @@ids)]
+        (m/with-mongo dbu/uri
+          (w/on-insert :coll wu/on-watch)
+          (is (= 2 (count @@ids))))
+        (is (= 1 (count @@ids)))
+        (is (= id (first @@ids)))))))
 
 (defn datetime-codec []
   (reify Codec

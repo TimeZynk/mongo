@@ -111,7 +111,7 @@
 
 (defprotocol ToObjectId
   "Convert to ObjectId."
-  :added "1.0"
+  ;; {:added "1.0"}
   (->object-id [v]))
 
 (extend-protocol ToObjectId

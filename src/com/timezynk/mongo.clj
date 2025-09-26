@@ -32,7 +32,8 @@
    [com.timezynk.mongo.methods.replace :refer [replace-method replace-options replace-result]]
    [com.timezynk.mongo.methods.run-command :refer [run-command-method]]
    [com.timezynk.mongo.methods.server-status :refer [server-status-method]]
-   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options update-result]])
+   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options update-result]]
+   [com.timezynk.mongo.watch-methods.config :as watch-config])
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb MongoClientSettings]
            [com.mongodb.client ClientSession TransactionBody]
@@ -126,7 +127,8 @@
          ~@body
          (finally
            (when (= (type ~conn) String)
-             (.close *mongo-client*)))))))
+             (.close *mongo-client*))
+           (watch-config/close-watch-ids))))))
 
 ; ------------------------
 ; Database
