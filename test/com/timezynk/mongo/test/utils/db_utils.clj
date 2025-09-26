@@ -3,6 +3,8 @@
    [clojure.tools.logging :as log]
    [com.timezynk.mongo :as m]))
 
+(def uri "mongodb://127.0.0.1:27017/test")
+
 (defn clear-db []
   (try
     (doseq [coll (m/list-collection-names)]
@@ -15,5 +17,5 @@
   (f))
 
 (defn test-suite-db-fixture [f]
-  (m/with-mongo "mongodb://127.0.0.1:27017/test"
+  (m/with-mongo uri
     (f)))

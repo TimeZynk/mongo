@@ -5,8 +5,8 @@
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.schema :as s]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
-  (:import [java.util.concurrent CountDownLatch TimeUnit]
-           [org.bson BsonInvalidOperationException]
+  (:import [java.lang IllegalArgumentException]
+           [java.util.concurrent CountDownLatch TimeUnit]
            [org.bson.types ObjectId]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
@@ -33,8 +33,8 @@
                           #"document can not be null"
                           (m/insert! :coll nil))))
   (testing "Inserting illegal doc throws exception"
-    (is (thrown-with-msg? BsonInvalidOperationException
-                          #"An Int64 value cannot be written to the root level of a BSON document"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Don't know how to create ISeq from: java.lang.Long"
                           (m/insert! :coll 1)))))
 
 (deftest insert
@@ -86,16 +86,16 @@
 
 ;; Why does this test fail?
 #_(deftest transaction-insert-fetch
-  (testing "Outside insert must wait"
-    (is (zero? (m/fetch-count :coll)))
-    (async/go
-      (Thread/sleep 500)
-      (m/insert! :coll {:b 2}))
-    (m/transaction
-      (m/insert! :coll {:a 1})
-      (Thread/sleep 1000)
-      (is (= 1 (count (m/fetch :coll)))))
-    (is (= 2 (m/fetch-count :coll)))))
+    (testing "Outside insert must wait"
+      (is (zero? (m/fetch-count :coll)))
+      (async/go
+        (Thread/sleep 500)
+        (m/insert! :coll {:b 2}))
+      (m/transaction
+        (m/insert! :coll {:a 1})
+        (Thread/sleep 1000)
+        (is (= 1 (count (m/fetch :coll)))))
+      (is (= 2 (m/fetch-count :coll)))))
 
 (deftest abort-transaction
   (testing "Aborted transaction makes no inserts"

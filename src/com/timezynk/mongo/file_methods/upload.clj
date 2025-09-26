@@ -1,4 +1,4 @@
-(ns ^:no-doc com.timezynk.mongo.files.upload
+(ns ^:no-doc com.timezynk.mongo.file-methods.upload
   (:require
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]])
   (:import [com.mongodb.client.gridfs GridFSBucket]
@@ -15,19 +15,19 @@
                                      (.asBsonReader))
                                  (.build (DecoderContext/builder))))))
 
-(defmulti upload-file-method
+(defmulti upload-method
   (fn [^GridFSBucket _bucket ^String _file ^InputStream _stream options]
     {:session (some? *mongo-session*)
      :options (coll? options)}))
 
-(defmethod upload-file-method {:session true :options true} [bucket file stream options]
+(defmethod upload-method {:session true :options true} [bucket file stream options]
   (.uploadFromStream bucket *mongo-session* file stream (upload-options options)))
 
-(defmethod upload-file-method {:session true :options false} [bucket file stream _options]
+(defmethod upload-method {:session true :options false} [bucket file stream _options]
   (.uploadFromStream bucket *mongo-session* file stream))
 
-(defmethod upload-file-method {:session false :options true} [bucket file stream options]
+(defmethod upload-method {:session false :options true} [bucket file stream options]
   (.uploadFromStream bucket file stream (upload-options options)))
 
-(defmethod upload-file-method {:session false :options false} [bucket file stream _options]
+(defmethod upload-method {:session false :options false} [bucket file stream _options]
   (.uploadFromStream bucket file stream))

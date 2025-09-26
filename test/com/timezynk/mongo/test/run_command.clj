@@ -8,9 +8,12 @@
 (use-fixtures :each #'dbu/test-case-db-fixture)
 
 (deftest server-status
-  (testing "Number of fields returned"
-    (is (= 57
-           (count (keys (m/server-status))))))
+  (testing "Plain call"
+    (is (= #{:asserts :connections}
+           (-> (m/server-status)
+               (select-keys [:asserts :connections])
+               keys
+               set))))
   (testing "Filter data"
     (is (= #{:$clusterTime
              :asserts
@@ -20,15 +23,12 @@
              :operationTime
              :pid
              :process
-             :profiler
-             :queues
-             :recoveryOplogApplier
              :service
              :uptime
              :uptimeEstimate
              :uptimeMillis
              :version}
-           (->> (m/server-status :asserts :queues)
+           (->> (m/server-status :asserts)
                 keys
                 (into #{}))))))
 

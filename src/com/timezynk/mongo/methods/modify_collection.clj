@@ -65,7 +65,29 @@
                PersistentArrayMap)
   coll)
 
-(defn modify-collection-method [coll {:keys [name schema validation validate?]}]
+(defn- set-full-change [coll full-change?]
+  (->bson {:collMod (name coll)
+           :changeStreamPreAndPostImages {:enabled full-change?}}))
+
+(defmulti full-change-stream-method
+  (fn [_coll _full-change?]
+    (some? *mongo-session*)))
+
+(defmethod full-change-stream-method true [coll full-change?]
+  (.runCommand *mongo-database*
+               *mongo-session*
+               (set-full-change coll full-change?)
+               PersistentArrayMap)
+  coll)
+
+(defmethod full-change-stream-method false [coll full-change?]
+  (.runCommand *mongo-database*
+               (set-full-change coll full-change?)
+               PersistentArrayMap)
+  coll)
+
+(defn modify-collection-method [coll {:keys [full-change? name schema validate? validation]}]
   (cond-> coll
     name                   (rename-collection-method name)
-    (or schema validation) (set-validation-method schema validation validate?)))
+    (or schema validation) (set-validation-method schema validation validate?)
+    full-change?           (full-change-stream-method full-change?)))

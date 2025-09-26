@@ -1,36 +1,36 @@
 # TimeZynk/mongo [![Clojars Project](https://img.shields.io/clojars/v/com.timezynk/mongo.svg)](https://clojars.org/com.timezynk/mongo) 
 
-A Clojure wrapper for the [modern MongoDB Java driver](https://mongodb.github.io/mongo-java-driver/4.5/apidocs/mongodb-driver-sync/com/mongodb/client/package-summary.html).
+A Clojure wrapper for the [modern MongoDB Java driver](https://mongodb.github.io/mongo-java-driver/5.6/apidocs/mongodb-driver-sync/com/mongodb/client/package-summary.html).
 
 ## Releases and Dependency Information
 
 ### Leiningen/Boot
 
-    [com.timezynk/mongo "0.10.3"]
+    [com.timezynk/mongo "0.11.0"]
 
 ### Clojure CLI/deps.edn
 
-    com.timezynk/mongo {:mvn/version "0.10.3"}
+    com.timezynk/mongo {:mvn/version "0.11.0"}
 
 ### Gradle
 
-    implementation("com.timezynk:mongo:0.10.3")
+    implementation("com.timezynk:mongo:0.11.0")
 
 ### Maven
 
     <dependency>
       <groupId>com.timezynk</groupId>
       <artifactId>mongo</artifactId>
-      <version>0.10.3</version>
+      <version>0.11.0</version>
     </dependency>
 
 ## API
 
-[cljdoc.org](https://cljdoc.org/d/com.timezynk/mongo/0.10.3/api/com.timezynk.mongo)
+[cljdoc.org](https://cljdoc.org/d/com.timezynk/mongo/0.11.0/api/com.timezynk.mongo)
 
 ## Testing
 
-You need MongoDB version 4.4 or later installed.
+You need MongoDB version 5.0 or later installed.
 
 1. Create a database folder:
 

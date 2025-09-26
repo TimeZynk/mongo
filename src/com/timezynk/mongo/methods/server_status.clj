@@ -5,7 +5,8 @@
   (:import [clojure.lang PersistentArrayMap]
            [java.util LinkedHashMap]))
 
-(defonce parts #{:asserts
+(defonce parts #{:activeIndexBuilds
+                 :asserts
                  :batchedDeletes
                  :bucketCatalog
                  :catalogStats
@@ -37,18 +38,22 @@
                  :opcountersRepl
                  :oplogTruncation
                  :planCache
+                 :profiler
                  :queryAnalyzers
                  :querySettings
                  :queryStats
                  :queues
                  :readConcernCounters
                  :readPreferenceCounters
+                 :recoveryOplogApplier
                  :repl
                  :scramCache
                  :security
                  :shardedIndexConsistency
+                 :sharding
                  :shardingStatistics
                  :shardSplits
+                 :spillWiredTiger
                  :storageEngine
                  :tcmalloc
                  :tenantMigrations
