@@ -10,7 +10,7 @@
 (deftest bad-replace
   (testing "Replace with nil"
     (is (thrown-with-msg? IllegalArgumentException
-                          #"replacement can not be null"
+                          #"Document can not be null"
                           (m/fetch-and-replace-one! :coll
                                                     {}
                                                     nil))))

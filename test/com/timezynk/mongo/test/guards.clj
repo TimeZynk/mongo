@@ -29,5 +29,5 @@
   (testing "No guard causes exception"
     (mg/with-guards {:insert (fn [_] true)}
       (is (thrown-with-msg? IllegalArgumentException
-                            #"state should be: writes is not an empty list"
+                            #"state should be: writeRequests is not an empty list"
                             (m/insert! :coll []))))))

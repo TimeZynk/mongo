@@ -3,7 +3,7 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
-  (:import [com.mongodb MongoCommandException]
+  (:import [org.bson BsonInvalidOperationException]
            [org.bson.types ObjectId]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
@@ -34,8 +34,8 @@
                                                    {}
                                                    {:email "test@test.com"}))))
   (testing "Pipeline with wrong stage"
-    (is (thrown-with-msg? MongoCommandException
-                          #"Unrecognized pipeline stage name"
+    (is (thrown-with-msg? BsonInvalidOperationException
+                          #"A StartArray value cannot be written to the root level of a BSON document."
                           (m/fetch-and-update-one! :coll
                                                    {}
                                                    [{:$push {:b 1}}])))))
