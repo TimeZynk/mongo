@@ -14,7 +14,6 @@
   (let [res (m/insert! :coll {:name "A"})]
     (is (= {:matched-count 1
             :modified-count 1
-            :_id nil
             :acknowledged true}
            (m/set! :coll
                    {:_id (:_id res)}
@@ -43,7 +42,6 @@
   (testing "Modifiers are handled as regular fields"
     (is (= {:matched-count 0
             :modified-count 0
-            :_id nil
             :acknowledged true}
            (m/set! :coll
                    {}

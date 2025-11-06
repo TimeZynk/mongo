@@ -2,25 +2,28 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert :refer [list->map]])
+   [com.timezynk.mongo.helpers :as h]
+   [com.timezynk.mongo.methods.fetch-and-update :refer [get-options]]
+   [com.timezynk.mongo.padding :refer [*replace-padding*]])
   (:import [org.bson Document]
-           [com.mongodb.client.model FindOneAndReplaceOptions ReturnDocument]))
+           [com.mongodb.client.model FindOneAndReplaceOptions]))
 
-(defn fetch-and-replace-options ^FindOneAndReplaceOptions [{:keys [return-new? upsert? collation only hint sort]}]
-  (cond-> (FindOneAndReplaceOptions.)
-    return-new? (.returnDocument ReturnDocument/AFTER)
-    upsert?     (.upsert true)
-    collation   (.collation collation)
-    only        (.projection (->bson (list->map only)))
-    hint        (.hint (->bson (list->map hint)))
-    sort        (.sort (->bson (list->map sort)))))
+(defn- fetch-and-replace-options ^FindOneAndReplaceOptions [options]
+  (get-options (FindOneAndReplaceOptions.) options))
 
 (defmulti fetch-and-replace-method ^Document
   (fn [_coll _query _doc _options]
     (some? *mongo-session*)))
 
 (defmethod fetch-and-replace-method true [coll query doc options]
-  (.findOneAndReplace coll *mongo-session* query doc options))
+  (.findOneAndReplace (h/get-collection coll)
+                      *mongo-session*
+                      (->bson query)
+                      (*replace-padding* doc)
+                      (fetch-and-replace-options options)))
 
 (defmethod fetch-and-replace-method false [coll query doc options]
-  (.findOneAndReplace coll query doc options))
+  (.findOneAndReplace (h/get-collection coll)
+                      (->bson query)
+                      (*replace-padding* doc)
+                      (fetch-and-replace-options options)))

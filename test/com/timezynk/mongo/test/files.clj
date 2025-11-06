@@ -1,7 +1,7 @@
 (ns com.timezynk.mongo.test.files
   (:require
    [clojure.java.io :refer [delete-file]]
-   [clojure.test :refer [are deftest is testing use-fixtures]]
+   [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.files :as mf]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
@@ -56,5 +56,4 @@
       (m/with-codecs [(datetime-codec)]
                      {}
         (let [info (mf/info-one :bucket {})]
-          (is (= Long (-> info :upload-date type))))))
-    ()))
+          (is (= Long (-> info :upload-date type))))))))

@@ -5,7 +5,7 @@
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database*]]
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
-   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
+   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]])
   (:import [clojure.lang Keyword Symbol]
            [com.mongodb MongoClientException MongoCommandException]
@@ -101,7 +101,7 @@
   {:added "1.0"}
   [coll & options]
   (try
-    (create-collection-method (name coll) (collection-options options))
+    (create-collection-method (name coll) options)
     (catch MongoCommandException _e
       (modify-collection-method coll options))))
 

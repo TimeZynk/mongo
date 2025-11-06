@@ -6,7 +6,7 @@
   (:import [com.mongodb.client.model ChangeStreamPreAndPostImagesOptions
             CreateCollectionOptions ValidationAction ValidationLevel ValidationOptions]))
 
-(defn collection-options [{:keys [collation full-change? level schema validation]}]
+(defn- collection-options [{:keys [collation full-change? level schema validation]}]
   (-> (cond-> (CreateCollectionOptions.)
         collation    (.collation collation)
         full-change? (.changeStreamPreAndPostImagesOptions (ChangeStreamPreAndPostImagesOptions. full-change?)))
@@ -25,7 +25,12 @@
     (some? *mongo-session*)))
 
 (defmethod create-collection-method true [coll options]
-  (.createCollection *mongo-database* *mongo-session* coll options))
+  (.createCollection *mongo-database*
+                     *mongo-session*
+                     coll
+                     (collection-options options)))
 
 (defmethod create-collection-method false [coll options]
-  (.createCollection *mongo-database* coll options))
+  (.createCollection *mongo-database*
+                     coll
+                     (collection-options options)))

@@ -6,7 +6,7 @@
 (def ^:no-doc ^:dynamic *write-hook* identity)
 
 (defmacro with-hooks
-  "Insert hooks for converting documents. The <read-fn> function will be called for each document
+  "Hooks for converting documents. The <read-fn> function will be called for each document
    returned from MongoDB; the <write-fn> will be called for each document sent to MongoDB, both
    for the query and for the payload.
 

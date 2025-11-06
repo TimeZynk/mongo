@@ -2,12 +2,14 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert :refer [list->map]])
+   [com.timezynk.mongo.convert :refer [list->map]]
+   [com.timezynk.mongo.helpers :as h]
+   [com.timezynk.mongo.padding :refer [*update-padding*]])
   (:import [org.bson Document]
            [com.mongodb.client.model FindOneAndUpdateOptions ReturnDocument]))
 
-(defn fetch-and-update-options ^FindOneAndUpdateOptions [{:keys [return-new? upsert? collation only hint sort]}]
-  (cond-> (FindOneAndUpdateOptions.)
+(defn get-options [obj {:keys [return-new? upsert? collation only hint sort]}]
+  (cond-> obj
     return-new? (.returnDocument ReturnDocument/AFTER)
     upsert?     (.upsert true)
     collation   (.collation collation)
@@ -15,12 +17,22 @@
     hint        (.hint (->bson (list->map hint)))
     sort        (.sort (->bson (list->map sort)))))
 
+(defn- fetch-and-update-options ^FindOneAndUpdateOptions [options]
+  (get-options (FindOneAndUpdateOptions.) options))
+
 (defmulti fetch-and-update-method ^Document
   (fn [_coll _query _update _options]
     (some? *mongo-session*)))
 
 (defmethod fetch-and-update-method true [coll query update options]
-  (.findOneAndUpdate coll *mongo-session* query update options))
+  (.findOneAndUpdate (h/get-collection coll)
+                     *mongo-session*
+                     (->bson query)
+                     (->bson (*update-padding* update))
+                     (fetch-and-update-options options)))
 
 (defmethod fetch-and-update-method false [coll query update options]
-  (.findOneAndUpdate coll query update options))
+  (.findOneAndUpdate (h/get-collection coll)
+                     (->bson query)
+                     (->bson (*update-padding* update))
+                     (fetch-and-update-options options)))

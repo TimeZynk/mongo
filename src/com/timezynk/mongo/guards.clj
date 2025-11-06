@@ -1,7 +1,7 @@
 (ns com.timezynk.mongo.guards
   "Guards make checks of payloads before the API call proper."
-  [:require
-   [com.timezynk.mongo.assert :refer [assert-keys]]]
+  (:require
+   [com.timezynk.mongo.assert :refer [assert-keys]])
   (:import [clojure.lang ExceptionInfo]))
 
 ; ------------------------

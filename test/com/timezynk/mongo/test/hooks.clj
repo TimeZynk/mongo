@@ -5,7 +5,8 @@
    [com.timezynk.mongo.assert :refer [catch-assert]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.hooks :as mh]
-   [com.timezynk.mongo.test.utils.db-utils :as dbu]))
+   [com.timezynk.mongo.test.utils.db-utils :as dbu])
+  (:import [org.bson.types ObjectId]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
 (use-fixtures :each #'dbu/test-case-db-fixture)
@@ -50,3 +51,26 @@
         (is (= {:key   {:key-2 "key-key-1"}
                 :key-2 "key-1"}
                (dissoc res-4 :_id)))))))
+
+(deftest rename-id
+  (mh/with-hooks {:read (fn [doc] (rename-keys doc {:_id :id}))}
+    (testing "On insert"
+      (let [res (m/insert! :coll {:f 1})]
+        (is (= ObjectId (-> res :id type)))))
+    (testing "On upsert"
+      (let [res (m/update! :coll {:a 2} {:$set {:f 2}} :upsert? true)]
+        (is (= ObjectId (-> res :id type))))
+      (let [res (m/replace-one! :coll {:a 3} {:f 3} :upsert? true)]
+        (is (= ObjectId (-> res :id type))))
+      (let [res (m/fetch-and-update-one! :coll
+                                         {:a 4}
+                                         {:$set {:f 4}}
+                                         :upsert? true
+                                         :return-new? true)]
+        (is (= ObjectId (-> res :id type))))
+      (let [res (m/fetch-and-replace-one! :coll
+                                          {:a 5}
+                                          {:f 5}
+                                          :upsert? true
+                                          :return-new? true)]
+        (is (= ObjectId (-> res :id type)))))))
