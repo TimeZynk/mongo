@@ -6,33 +6,32 @@
   (:refer-clojure :exclude [distinct])
   (:require
    [com.timezynk.mongo.assert :refer [assert-keys]]
-   [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database* *mongo-session* *mongo-types*]]
-   [com.timezynk.mongo.convert :refer [it->clj list->map]]
+   [com.timezynk.mongo.convert :refer [it->clj]]
    [com.timezynk.mongo.guards :refer [catch-return *insert-guard* *replace-guard* *update-guard*]]
-   [com.timezynk.mongo.helpers :as h]
+   [com.timezynk.mongo.helpers :refer [codec-registry get-collection]]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
    [com.timezynk.mongo.methods.connection :refer [get-read-concern get-write-concern connection-method]]
    [com.timezynk.mongo.methods.count :refer [count-method]]
-   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method collection-options]]
+   [com.timezynk.mongo.methods.create-collection :refer [create-collection-method]]
    [com.timezynk.mongo.methods.create-index :refer [create-index-method]]
-   [com.timezynk.mongo.methods.delete :refer [delete-method delete-options delete-one-method delete-result]]
+   [com.timezynk.mongo.methods.delete :refer [delete-method delete-one-method]]
    [com.timezynk.mongo.methods.distinct :refer [distinct-method]]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
    [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
-   [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method fetch-and-delete-options]]
-   [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method fetch-and-replace-options]]
-   [com.timezynk.mongo.methods.fetch-and-update :refer [fetch-and-update-method fetch-and-update-options]]
-   [com.timezynk.mongo.methods.insert :refer [insert-method insert-result]]
+   [com.timezynk.mongo.methods.fetch-and-delete :refer [fetch-and-delete-method]]
+   [com.timezynk.mongo.methods.fetch-and-replace :refer [fetch-and-replace-method]]
+   [com.timezynk.mongo.methods.fetch-and-update :refer [fetch-and-update-method]]
+   [com.timezynk.mongo.methods.insert :refer [insert-method insert-padding insert-result]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.methods.list-databases :refer [list-databases-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]]
-   [com.timezynk.mongo.methods.replace :refer [replace-method replace-options replace-result]]
+   [com.timezynk.mongo.methods.replace :refer [replace-method]]
    [com.timezynk.mongo.methods.run-command :refer [run-command-method]]
    [com.timezynk.mongo.methods.server-status :refer [server-status-method]]
-   [com.timezynk.mongo.methods.update :refer [update-method update-one-method update-options update-result]]
+   [com.timezynk.mongo.methods.update :refer [update-method update-one-method]]
    [com.timezynk.mongo.watch-methods.config :as watch-config])
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb MongoClientSettings]
@@ -121,8 +120,8 @@
                    (connection-method ~conn [])
                    ~conn)]
      (binding [*mongo-client*   (:client client#)
-               *mongo-database* (h/codec-registry (:database client#)
-                                                  *mongo-codecs*)]
+               *mongo-database* (codec-registry (:database client#)
+                                                *mongo-codecs*)]
        (try
          ~@body
          (finally
@@ -157,9 +156,9 @@
   {:added "1.0"
    :arglists '([<database> & <body>])}
   [db & body]
-  `(binding [*mongo-database* (h/codec-registry (.getDatabase *mongo-client*
-                                                              (name ~db))
-                                                *mongo-codecs*)]
+  `(binding [*mongo-database* (codec-registry (.getDatabase *mongo-client*
+                                                            (name ~db))
+                                              *mongo-codecs*)]
      ~@body))
 
 (defn list-databases
@@ -196,7 +195,7 @@
    :arglists '([<codecs> <bson-types> & <body>])}
   [codecs bson-types & body]
   `(let [new-codecs# (concat *mongo-codecs* ~codecs)]
-     (binding [*mongo-database* (h/codec-registry *mongo-database* new-codecs#)
+     (binding [*mongo-database* (codec-registry *mongo-database* new-codecs#)
                *mongo-codecs*   new-codecs#
                *mongo-types*    (merge *mongo-types* ~bson-types)]
        ~@body)))
@@ -426,7 +425,7 @@
    :arglists '([<collection> & :collation <collation object> :full-change? <boolean> :level [:strict :moderate :off] :schema {} :validation {}])}
   [coll & {:as options}]
   (assert-keys options #{:collation :full-change? :level :schema :validation})
-  `(create-collection-method (name ~coll) (collection-options ~options)))
+  `(create-collection-method (name ~coll) ~options))
 
 (defmacro modify-collection!
   "Make updates to a collection.
@@ -465,7 +464,7 @@
    :arglists '([<collection>])}
   [coll]
   {:pre [coll]}
-  (drop-collection-method (h/get-collection coll)))
+  (drop-collection-method coll))
 
 ; ------------------------
 ; Index
@@ -475,7 +474,7 @@
   {:added "1.0"
    :arglists '([<collection>])}
   [coll]
-  (-> (.listIndexes (h/get-collection coll) PersistentArrayMap)
+  (-> (.listIndexes (get-collection coll) PersistentArrayMap)
       (it->clj)))
 
 (defmacro create-index!
@@ -512,16 +511,13 @@
    :arglists '([<collection> <keys> & :collation <collation object> :background? <boolean> :name <string> :filter {} :sparse? <boolean> :unique? <boolean>])}
   [coll keys & {:as options}]
   (assert-keys options #{:background? :collation :filter :name :sparse? :unique?})
-  `(create-index-method (h/get-collection ~coll)
-                        (->bson (list->map ~keys))
-                        ~options))
+  `(create-index-method ~coll ~keys ~options))
 
 (defn drop-index!
   {:added "1.0"
    :arglists '([<collection> <index name>])}
   [coll index]
-  (drop-index-method (h/get-collection coll)
-                     index))
+  (drop-index-method coll index))
 
 ; ------------------------
 ; Fetch
@@ -556,10 +552,7 @@
   ([coll] `(fetch ~coll {}))
   ([coll query & {:as options}]
    (assert-keys options #{:collation :limit :only :skip :sort})
-   `(-> (fetch-method (h/get-collection ~coll)
-                      (->bson ~query)
-                      ~options)
-        (it->clj))))
+   `(fetch-method (get-collection ~coll) ~query ~options)))
 
 (defmacro fetch-one
   "Return only the first document retrieved.
@@ -582,11 +575,7 @@
   ([coll] `(fetch-one ~coll {}))
   ([coll query & {:as options}]
    (assert-keys options #{:collation :only :skip :sort})
-   `(-> (fetch-method (h/get-collection ~coll)
-                      (->bson ~query)
-                      (assoc ~options :limit 1))
-        (it->clj)
-        (first))))
+   `(first (fetch-method (get-collection ~coll) ~query (assoc ~options :limit 1)))))
 
 (defmacro fetch-by-id
   "Fetch a single document by its id.
@@ -604,11 +593,7 @@
    :arglists '([<collection> <id> & :only {}])}
   [coll id & {:as options}]
   (assert-keys options #{:only})
-  `(-> (fetch-method (h/get-collection ~coll)
-                     (->bson {:_id ~id})
-                     (assoc ~options :limit 1))
-       (it->clj)
-       (first)))
+  `(first (fetch-method (get-collection ~coll) {:_id ~id} (assoc ~options :limit 1))))
 
 (defn fetch-count
   "Count the number of documents returned.
@@ -624,8 +609,7 @@
   {:added "1.0"
    :arglists '([<collection>] [<collection> <query>])}
   ([coll]       (fetch-count coll {}))
-  ([coll query] (count-method (h/get-collection coll)
-                              (->bson query))))
+  ([coll query] (count-method coll query)))
 
 (defmacro distinct
   "Fetch distinct values from a particular field.
@@ -659,11 +643,10 @@
   ([coll field] `(distinct ~coll ~field {}))
   ([coll field query & {:as options}]
    (assert-keys options #{:validate?})
-   `(-> (distinct-method ~coll
-                         (name ~field)
-                         (->bson ~query)
-                         ~options)
-        (it->clj))))
+   `(distinct-method ~coll
+                     (name ~field)
+                     ~query
+                     ~options)))
 
 ; ------------------------
 ; Insert
@@ -696,9 +679,9 @@
   [coll docs]
   `(catch-return
      (*insert-guard* ~docs)
-     (-> (h/get-collection ~coll)
-         (insert-method ~docs)
-         (insert-result ~docs))))
+     (let [docs# (insert-padding ~docs)]
+       (-> (insert-method ~coll docs#)
+           (insert-result docs#)))))
 
 (defmacro insert-one!
   "This is identical to `insert!`, except if payload is nil, return nil instead of throwing exception.
@@ -709,9 +692,9 @@
   `(when ~doc
      (catch-return
        (*insert-guard* ~doc)
-       (-> (h/get-collection ~coll)
-           (insert-method ~doc)
-           (insert-result ~doc)))))
+       (let [doc# (insert-padding ~doc)]
+         (-> (insert-method ~coll doc#)
+             (insert-result doc#))))))
 
 ; ------------------------
 ; Update
@@ -747,11 +730,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (-> (h/get-collection ~coll)
-         (update-method (->bson ~query)
-                        (->bson ~update)
-                        (update-options ~options))
-         (update-result))))
+     (update-method ~coll ~query ~update ~options)))
 
 (defmacro set!
   "Shorthand for `update!` with a single `:$set` modifier.
@@ -770,11 +749,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (-> (h/get-collection ~coll)
-         (update-method (->bson ~query)
-                        (->bson {:$set ~update})
-                        (update-options ~options))
-         (update-result))))
+     (update-method ~coll ~query {:$set ~update} ~options)))
 
 (defmacro update-one!
   "Update first matching document.
@@ -806,11 +781,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (-> (h/get-collection ~coll)
-         (update-one-method (->bson ~query)
-                            (->bson ~update)
-                            (update-options ~options))
-         (update-result))))
+     (update-one-method ~coll ~query ~update ~options)))
 
 (defmacro update-by-id!
   {:added "1.0"}
@@ -818,11 +789,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (-> (h/get-collection ~coll)
-         (update-one-method (->bson {:_id ~id})
-                            (->bson ~update)
-                            (update-options ~options))
-         (update-result))))
+     (update-one-method ~coll {:_id ~id} ~update ~options)))
 
 (defmacro set-one!
   "Shorthand for `update-one!` with a single `:$set` modifier.
@@ -841,11 +808,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (-> (h/get-collection ~coll)
-         (update-one-method (->bson ~query)
-                            (->bson {:$set ~update})
-                            (update-options ~options))
-         (update-result))))
+     (update-one-method ~coll ~query {:$set ~update} ~options)))
 
 (defmacro set-by-id!
   {:added "1.0"}
@@ -853,11 +816,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (-> (h/get-collection ~coll)
-         (update-one-method (->bson {:_id ~id})
-                            (->bson {:$set ~update})
-                            (update-options ~options))
-         (update-result))))
+     (update-one-method ~coll {:_id ~id} {:$set ~update} ~options)))
 
 (defmacro fetch-and-update-one!
   "Update first matching document.
@@ -882,10 +841,7 @@
   (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (-> (h/get-collection ~coll)
-         (fetch-and-update-method (->bson ~query)
-                                  (->bson ~update)
-                                  (fetch-and-update-options ~options)))))
+     (fetch-and-update-method ~coll ~query ~update ~options)))
 
 (defmacro fetch-and-update-by-id!
   {:added "1.0"}
@@ -893,10 +849,7 @@
   (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (-> (h/get-collection ~coll)
-         (fetch-and-update-method (->bson {:_id ~id})
-                                  (->bson ~update)
-                                  (fetch-and-update-options ~options)))))
+     (fetch-and-update-method ~coll {:_id ~id} ~update ~options)))
 
 (defmacro fetch-and-set-one!
   "Shorthand for `fetch-and-update-one!` with a single `:$set` modifier.
@@ -915,10 +868,7 @@
   (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (-> (h/get-collection ~coll)
-         (fetch-and-update-method (->bson ~query)
-                                  (->bson {:$set ~update})
-                                  (fetch-and-update-options ~options)))))
+     (fetch-and-update-method ~coll ~query {:$set ~update} ~options)))
 
 (defmacro fetch-and-set-by-id!
   {:added "1.0"}
@@ -926,10 +876,7 @@
   (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (-> (h/get-collection ~coll)
-         (fetch-and-update-method (->bson {:_id ~id})
-                                  (->bson {:$set ~update})
-                                  (fetch-and-update-options ~options)))))
+     (fetch-and-update-method ~coll {:_id ~id} {:$set ~update} ~options)))
 
 ; ------------------------
 ; Replace
@@ -959,11 +906,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*replace-guard* ~doc)
-     (-> (h/get-collection ~coll)
-         (replace-method (->bson ~query)
-                         ~doc
-                         (replace-options ~options))
-         (replace-result))))
+     (replace-method ~coll ~query ~doc ~options)))
 
 (defmacro replace-by-id!
   {:added "1.0"}
@@ -971,11 +914,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*replace-guard* ~doc)
-     (-> (h/get-collection ~coll)
-         (replace-method (->bson {:_id ~id})
-                         ~doc
-                         (replace-options ~options))
-         (replace-result))))
+     (replace-method ~coll {:_id ~id} ~doc ~options)))
 
 (defmacro fetch-and-replace-one!
   {:added "1.0"}
@@ -983,10 +922,7 @@
   (assert-keys options #{:collation :hint :only :sort :return-new? :upsert?})
   `(catch-return
      (*replace-guard* ~doc)
-     (-> (h/get-collection ~coll)
-         (fetch-and-replace-method (->bson ~query)
-                                   ~doc
-                                   (fetch-and-replace-options ~options)))))
+     (fetch-and-replace-method ~coll ~query ~doc ~options)))
 
 (defmacro fetch-and-replace-by-id!
   {:added "1.0"}
@@ -994,10 +930,7 @@
   (assert-keys options #{:collation :hint :only :sort :return-new? :upsert?})
   `(catch-return
      (*replace-guard* ~doc)
-     (-> (h/get-collection ~coll)
-         (fetch-and-replace-method (->bson {:_id ~id})
-                                   ~doc
-                                   (fetch-and-replace-options ~options)))))
+     (fetch-and-replace-method ~coll {:_id ~id} ~doc ~options)))
 
 ; ------------------------
 ; Delete
@@ -1022,10 +955,7 @@
    :arglists '([<collection> <query> & :collation <collation object> :hint {}])}
   [coll query & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(-> (h/get-collection ~coll)
-       (delete-method (->bson ~query)
-                      (delete-options ~options))
-       (delete-result)))
+  `(delete-method ~coll ~query ~options))
 
 (defmacro delete-one!
   "Delete first matching document.
@@ -1046,35 +976,25 @@
    :arglists '([<collection> <query> & :collation <collation object> :hint {}])}
   [coll query & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(-> (h/get-collection ~coll)
-       (delete-one-method (->bson ~query)
-                          (delete-options ~options))
-       (delete-result)))
+  `(delete-one-method ~coll ~query ~options))
 
 (defmacro delete-by-id!
   {:added "1.0"}
   [coll id & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(-> (delete-one-method (h/get-collection ~coll)
-                          (->bson {:_id ~id})
-                          (delete-options ~options))
-       (delete-result)))
+  `(delete-one-method ~coll {:_id ~id} ~options))
 
 (defmacro fetch-and-delete-one!
   {:added "1.0"}
   [coll query & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(fetch-and-delete-method (h/get-collection ~coll)
-                            (->bson ~query)
-                            (fetch-and-delete-options ~options)))
+  `(fetch-and-delete-method ~coll ~query ~options))
 
 (defmacro fetch-and-delete-by-id!
   {:added "1.0"}
   [coll id & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(fetch-and-delete-method (h/get-collection ~coll)
-                            (->bson {:_id ~id})
-                            (fetch-and-delete-options ~options)))
+  `(fetch-and-delete-method ~coll {:_id ~id} ~options))
 
 ; ------------------------
 ; Transaction
@@ -1133,6 +1053,4 @@
    :arglists '([<collection> & <pipeline>])}
   [coll & pipeline]
   {:pre [coll pipeline]}
-  (-> (aggregate-method (h/get-collection coll)
-                        (map ->bson pipeline))
-      (it->clj)))
+  (aggregate-method coll pipeline))

@@ -2,7 +2,7 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert :refer [list->map]]))
+   [com.timezynk.mongo.convert :refer [it->clj list->map]]))
 
 (defn- with-options [result {:keys [collation limit only skip sort]}]
   (cond-> result
@@ -18,15 +18,25 @@
      :options (coll? options)}))
 
 (defmethod fetch-method {:session true :options true} [coll query options]
-  (-> (.find coll *mongo-session* query)
-      (with-options options)))
+  (-> (.find coll
+             *mongo-session*
+             (->bson query))
+      (with-options options)
+      (it->clj)))
 
 (defmethod fetch-method {:session true :options false} [coll query _options]
-  (.find coll *mongo-session* query))
+  (-> (.find coll
+             *mongo-session*
+             (->bson query))
+      (it->clj)))
 
 (defmethod fetch-method {:session false :options true} [coll query options]
-  (-> (.find coll query)
-      (with-options options)))
+  (-> (.find coll
+             (->bson query))
+      (with-options options)
+      (it->clj)))
 
 (defmethod fetch-method {:session false :options false} [coll query _options]
-  (.find coll query))
+  (-> (.find coll
+             (->bson query))
+      (it->clj)))

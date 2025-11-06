@@ -1,7 +1,9 @@
 (ns ^:no-doc com.timezynk.mongo.methods.create-index
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
-   [com.timezynk.mongo.config :refer [*mongo-session*]])
+   [com.timezynk.mongo.config :refer [*mongo-session*]]
+   [com.timezynk.mongo.convert :refer [list->map]]
+   [com.timezynk.mongo.helpers :as h])
   (:import [com.mongodb.client.model IndexOptions]))
 
 (defn- create-options ^IndexOptions
@@ -19,7 +21,12 @@
     (some? *mongo-session*)))
 
 (defmethod create-index-method true [coll keys options]
-  (.createIndex coll *mongo-session* keys (create-options options)))
+  (.createIndex (h/get-collection coll)
+                *mongo-session*
+                (->bson (list->map keys))
+                (create-options options)))
 
 (defmethod create-index-method false [coll keys options]
-  (.createIndex coll keys (create-options options)))
+  (.createIndex (h/get-collection coll)
+                (->bson (list->map keys))
+                (create-options options)))

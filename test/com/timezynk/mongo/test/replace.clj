@@ -12,7 +12,6 @@
     (let [res (m/insert! :companies {:name "1"})]
       (is (= {:matched-count 1
               :modified-count 1
-              :_id nil
               :acknowledged true}
              (m/replace-one! :companies
                              {:_id (:_id res)}

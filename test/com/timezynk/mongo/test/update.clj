@@ -16,7 +16,6 @@
     (let [res (m/insert! :companies {:name "Company"})]
       (is (= {:matched-count 1
               :modified-count 1
-              :_id nil
               :acknowledged true}
              (m/update! :companies
                         {:_id (:_id res)}
@@ -77,12 +76,10 @@
                            {:name "Company 2"}])
     (is (= {:matched-count 1
             :modified-count 1
-            :_id nil
             :acknowledged true}
            (m/update-one! :companies {} {:$set {:name "Company 3"}})))
     (is (= {:matched-count 2
             :modified-count 2
-            :_id nil
             :acknowledged true}
            (m/update! :companies {} {:$set {:name "Company 4"}})))))
 

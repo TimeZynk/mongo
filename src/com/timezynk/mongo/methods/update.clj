@@ -2,7 +2,10 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert :refer [list->map]])
+   [com.timezynk.mongo.convert :refer [list->map]]
+   [com.timezynk.mongo.helpers :as h]
+   [com.timezynk.mongo.hooks :refer [*read-hook*]]
+   [com.timezynk.mongo.padding :refer [*update-padding*]])
   (:import [com.mongodb.client.model UpdateOptions]
            [com.mongodb.client.result
             UpdateResult
@@ -15,38 +18,61 @@
 (extend-protocol UpdRes
   UpdateResult$AcknowledgedUpdateResult
   (update-result [result]
-    {:matched-count  (.getMatchedCount result)
-     :modified-count (.getModifiedCount result)
-     :_id            (when-let [v (.getUpsertedId result)]
-                       (.getValue v))
-     :acknowledged   true})
+    (merge {:matched-count  (.getMatchedCount result)
+            :modified-count (.getModifiedCount result)
+            :acknowledged   true}
+           (when-let [v (.getUpsertedId result)]
+             (-> {:_id (.getValue v)}
+                 (*read-hook*)))))
 
   UpdateResult$UnacknowledgedUpdateResult
   (update-result [_result]
     {:acknowledged false}))
 
-(defn update-options ^UpdateOptions [{:keys [upsert? collation hint]}]
-  (cond-> (UpdateOptions.)
+(defn get-options [obj {:keys [upsert? collation hint]}]
+  (cond-> obj
     upsert?   (.upsert true)
     collation (.collation collation)
     hint      (.hint (->bson (list->map hint)))))
+
+(defn- update-options ^UpdateOptions [options]
+  (get-options (UpdateOptions.) options))
 
 (defmulti update-method ^UpdateResult
   (fn [_coll _query _update _options]
     (some? *mongo-session*)))
 
 (defmethod update-method true [coll query update options]
-  (.updateMany coll *mongo-session* query update options))
+  (-> (.updateMany (h/get-collection coll)
+                   *mongo-session*
+                   (->bson query)
+                   (->bson (*update-padding* update))
+                   (update-options options))
+      (update-result)))
 
 (defmethod update-method false [coll query update options]
-  (.updateMany coll query update options))
+  (-> (.updateMany (h/get-collection coll)
+                   (->bson query)
+                   (->bson (*update-padding* update))
+                   (update-options options))
+
+      (update-result)))
 
 (defmulti update-one-method ^UpdateResult
   (fn [_coll _query _update _options]
     (some? *mongo-session*)))
 
 (defmethod update-one-method true [coll query update options]
-  (.updateOne coll *mongo-session* query update options))
+  (-> (.updateOne (h/get-collection coll)
+                  *mongo-session*
+                  (->bson query)
+                  (->bson (*update-padding* update))
+                  (update-options options))
+      (update-result)))
 
 (defmethod update-one-method false [coll query update options]
-  (.updateOne coll query update options))
+  (-> (.updateOne (h/get-collection coll)
+                  (->bson query)
+                  (->bson (*update-padding* update))
+                  (update-options options))
+      (update-result)))

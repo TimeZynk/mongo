@@ -56,13 +56,12 @@
     (let [db (m/create-connection! "mongodb://localhost:27017/db" :write-concern :unacknowledged)]
       (m/with-mongo db
         (m/delete! :coll {})
-        (is (nil? (:_id (m/insert! :coll {:a 1}))))
+        (is (not (contains? (m/insert! :coll {:a 1}) :_id)))
         (is (= {:acknowledged false}
                (m/set! :coll {} {:a 2})))
         (m/with-write-concern :acknowledged
           (is (some? (:_id (m/insert! :coll {:a 1}))))
           (is (= {:acknowledged true
-                  :_id nil
                   :matched-count 2
                   :modified-count 1}
                  (m/set! :coll {} {:a 2}))))))))

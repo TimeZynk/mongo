@@ -2,7 +2,7 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-database* *mongo-session*]]
-   [com.timezynk.mongo.helpers :as h]
+   [com.timezynk.mongo.helpers :refer [get-collection]]
    [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
    [com.timezynk.mongo.methods.list-collections :refer [list-collections-method]]
    [com.timezynk.mongo.schema :refer [convert-schema]])
@@ -17,24 +17,24 @@
   (fn [_coll _name] (some? *mongo-session*)))
 
 (defmethod rename-collection-method true [coll name]
-  (.renameCollection (h/get-collection coll) *mongo-session* (set-name name))
+  (.renameCollection (get-collection coll) *mongo-session* (set-name name))
   name)
 
 (defmethod rename-collection-method false [coll name]
-  (.renameCollection (h/get-collection coll) (set-name name))
+  (.renameCollection (get-collection coll) (set-name name))
   name)
 
 (defn- set-validation [coll schema validation validate?]
   (let [schema (convert-schema schema)]
     (when validate?
       (when (and schema
-                 (first (fetch-method (h/get-collection coll)
-                                      (->bson {:$nor [schema]})
+                 (first (fetch-method (get-collection coll)
+                                      {:$nor [schema]}
                                       [:limit 1])))
         (throw (MongoClientException. "Existing documents failed new schema validation")))
       (when (and validation
-                 (first (fetch-method (h/get-collection coll)
-                                      (->bson {:$nor [validation]})
+                 (first (fetch-method (get-collection coll)
+                                      {:$nor [validation]}
                                       [:limit 1])))
         (throw (MongoClientException. "Existing documents failed new custom validation"))))
     (let [validator  (as-> (list-collections-method) v
