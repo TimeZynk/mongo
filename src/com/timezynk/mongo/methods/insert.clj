@@ -40,8 +40,7 @@
     doc))
 
 (defmulti insert-padding
-  (fn [docs]
-    (sequential? docs)))
+  sequential?)
 
 (defmethod insert-padding true [docs]
   (map *insert-padding* docs))

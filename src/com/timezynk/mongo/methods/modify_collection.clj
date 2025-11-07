@@ -14,7 +14,8 @@
                    (clojure.core/name name)))
 
 (defmulti rename-collection-method
-  (fn [_coll _name] (some? *mongo-session*)))
+  (fn [_coll _name]
+    (some? *mongo-session*)))
 
 (defmethod rename-collection-method true [coll name]
   (.renameCollection (get-collection coll) *mongo-session* (set-name name))

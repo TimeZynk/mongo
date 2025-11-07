@@ -76,7 +76,8 @@
     (->bson map)))
 
 (defmulti server-status-method
-  (fn [_options] (some? *mongo-session*)))
+  (fn [_options]
+    (some? *mongo-session*)))
 
 (defmethod server-status-method true [options]
   (.runCommand *mongo-database*

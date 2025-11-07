@@ -9,7 +9,8 @@
    [com.timezynk.mongo.file-methods.upload :refer [upload-method]]
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
-   [com.timezynk.mongo.methods.fetch :refer [fetch-method]])
+   [com.timezynk.mongo.methods.fetch :refer [fetch-method]]
+   [com.timezynk.mongo.util :as mu])
   (:import [java.io ByteArrayInputStream ByteArrayOutputStream]))
 
 ; ------------------------
@@ -216,4 +217,4 @@
   "Create a random file name."
   {:added "1.0"}
   []
-  (apply str "File_" (repeatedly 20 #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
+  (apply str "File_" (mu/random-string 20)))

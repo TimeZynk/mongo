@@ -13,7 +13,8 @@
     (->bson map)))
 
 (defmulti run-command-method
-  (fn [_cmd _val _options] (some? *mongo-session*)))
+  (fn [_cmd _val _options]
+    (some? *mongo-session*)))
 
 (defmethod run-command-method true [cmd val options]
   (.runCommand *mongo-database*

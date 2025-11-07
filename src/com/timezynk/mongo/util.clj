@@ -132,3 +132,10 @@
 
   nil
   (->object-id [_] nil))
+
+; ------------------------
+; String
+; ------------------------
+
+(defn random-string [size]
+  (repeatedly size #(rand-nth "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")))
