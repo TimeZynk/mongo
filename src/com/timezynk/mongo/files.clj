@@ -217,4 +217,4 @@
   "Create a random file name."
   {:added "1.0"}
   []
-  (apply str "File_" (mu/random-string 20)))
+  (str "File_" (mu/random-string 20)))

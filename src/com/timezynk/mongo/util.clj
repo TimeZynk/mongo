@@ -6,6 +6,7 @@
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
    [com.timezynk.mongo.methods.create-collection :refer [create-collection-method]]
+   [com.timezynk.mongo.methods.drop-index :refer [drop-index-method]]
    [com.timezynk.mongo.methods.modify-collection :refer [modify-collection-method]])
   (:import [clojure.lang Keyword Symbol]
            [com.mongodb MongoClientException MongoCommandException]
@@ -102,8 +103,20 @@
   [coll & options]
   (try
     (create-collection-method (name coll) options)
-    (catch MongoCommandException _e
-      (modify-collection-method coll options))))
+    (catch MongoCommandException e
+      (if (= (.getErrorCode e) 48)
+        (modify-collection-method coll options)
+        (throw e)))))
+
+(defn discard-index!
+  "Try to drop an index. If it doesn't exist, ignore the exception."
+  {:added "1.0"}
+  [coll index]
+  (try
+    (drop-index-method coll index)
+    (catch MongoCommandException e
+      (when (not= (.getErrorCode e) 27)
+        (throw e)))))
 
 ; ------------------------
 ; ObjectId
@@ -138,4 +151,4 @@
 ; ------------------------
 
 (defn random-string [size]
-  (repeatedly size #(rand-nth "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")))
+  (apply str (repeatedly size #(rand-nth "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"))))

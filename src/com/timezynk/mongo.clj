@@ -484,8 +484,8 @@
    | ---            | ---
    | `collection`   | `keyword/string` Collection name.
    | `keys`         | `map/list(keyword/string)` A document or a list of keywords or strings.
-   | `:collation`   | `optional collation object` Collation of index.
    | `:background?` | `optional boolean` Create the index in the background. Default `false`.
+   | `:collation`   | `optional collation object` Collation of index.
    | `:filter`      | `optional map` A partial-filter-expression for the index.
    | `:name`        | `optional string` A custom name for the index.
    | `:sparse?`     | `optional boolean` Don't index null values. Default `false`.

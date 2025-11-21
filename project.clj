@@ -1,4 +1,4 @@
-(defproject com.timezynk/mongo "0.12.0"
+(defproject com.timezynk/mongo "0.12.1"
   :description  "Clojure wrapper for com.mongodb.client Java API."
   :url          "https://github.com/TimeZynk/mongo"
   :license      {:name "MIT"
@@ -17,6 +17,7 @@
                  [tortue/spy "2.15.0"]]
   :repl-options {:init-ns com.timezynk.mongo}
   :test-paths   ["test"]
+  :javac-options ["--release" "21"]
   :plugins      [[com.github.clj-kondo/lein-clj-kondo "0.2.1"]
                  [dev.weavejester/lein-cljfmt "0.12.0"]]
   :profiles     {:kaocha {:dependencies [[lambdaisland/kaocha "1.0.632"]]

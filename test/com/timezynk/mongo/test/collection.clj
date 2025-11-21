@@ -2,6 +2,7 @@
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
+   [com.timezynk.mongo.util :as mu]
    [com.timezynk.mongo.schema :as s]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
   (:import [com.mongodb MongoClientException MongoCommandException MongoWriteException]))
@@ -167,3 +168,10 @@
                           :required ["name"]}
             :name "Baa"}
            (get-in (m/collection-info :user-2) [:options :validator])))))
+
+(deftest make-collection
+  (m/create-collection! :coll)
+  (mu/make-collection! :coll :schema {:field (s/string)})
+  (is (= "string"
+         (get-in (m/collection-info :coll)
+                 [:options :validator :$jsonSchema :properties :field :bsonType]))))

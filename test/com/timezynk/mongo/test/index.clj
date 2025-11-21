@@ -2,6 +2,7 @@
   (:require
    [clojure.test :refer [deftest is use-fixtures]]
    [com.timezynk.mongo :as m]
+   [com.timezynk.mongo.util :as mu]
    [com.timezynk.mongo.test.utils.db-utils :as dbu]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
@@ -39,4 +40,37 @@
             :partialFilterExpression {:flag-index true}}}
          (->> (m/list-indexes :coll)
               (map #(dissoc % :v :name))
+              (into #{})))))
+
+(deftest vectored-indexes
+  (m/create-index! :coll [:f-1 :f-2])
+  (is (= #{{:_id 1}
+           {:f-1 1 :f-2 1}}
+         (->> (m/list-indexes :coll)
+              (map :key)
+              (into #{})))))
+
+(deftest discard-index
+  (m/create-index! :coll [:f-1 :f-2])
+  (m/drop-index! :coll {:f-1 1 :f-2 1})
+  (mu/discard-index! :coll {:f-1 1 :f-2 1})
+  (is (= #{{:_id 1}}
+         (->> (m/list-indexes :coll)
+              (map :key)
+              (into #{})))))
+
+(deftest drop-by-vector
+  (m/create-index! :coll [:f-1 :f-2])
+  (m/drop-index! :coll [:f-1 :f-2])
+  (is (= #{{:_id 1}}
+         (->> (m/list-indexes :coll)
+              (map :key)
+              (into #{})))))
+
+(deftest drop-by-name
+  (m/create-index! :coll [:f-1 :f-2])
+  (m/drop-index! :coll "f-1_1_f-2_1")
+  (is (= #{{:_id 1}}
+         (->> (m/list-indexes :coll)
+              (map :key)
               (into #{})))))
