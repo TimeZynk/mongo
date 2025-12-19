@@ -46,12 +46,12 @@
           id-2  (:_id (m/insert! :coll {:undefined (BsonUndefined.)}))]
       (is (= BsonUndefined
              (m/with-codecs codec {}
-               (-> (m/fetch-by-id :coll id-1)
+               (-> (m/fetch-one :coll {:_id id-1})
                    :undefined
                    type))))
       (is (nil? (m/with-codecs codec {}
-                  (:undefined (m/fetch-by-id :coll id-2)))))
-      (is (nil? (:undefined (m/fetch-by-id :coll id-1)))))))
+                  (:undefined (m/fetch-one :coll {:_id id-2})))))
+      (is (nil? (:undefined (m/fetch-one :coll {:_id id-1})))))))
 
 (defn- int-codec []
   (reify Codec
@@ -72,16 +72,16 @@
           id-2 (:_id (m/insert! :coll {:int (int 2)}))]
       (is (= Integer
              (m/with-codecs codec {}
-               (-> (m/fetch-by-id :coll id-1)
+               (-> (m/fetch-one :coll {:_id id-1})
                    :int
                    type))))
       (is (= Long
-             (-> (m/fetch-by-id :coll id-1)
+             (-> (m/fetch-one :coll {:_id id-1})
                  :int
                  type)))
       (is (= Long
              (m/with-codecs codec {}
-               (-> (m/fetch-by-id :coll id-2)
+               (-> (m/fetch-one :coll {:_id id-2})
                    :int
                    type)))))))
 

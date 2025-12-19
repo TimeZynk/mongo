@@ -1,8 +1,9 @@
-# Call-back Functions
+# Hooks, guards, and padding
 
-There are two ways to automate interjection through call-back functions during calls:
+There are three ways to automate interjection through call-back functions during calls:
 * document hooks,
-* preemptive guards.
+* preemptive guards,
+* payload padding.
 
 ## Hooks
 
@@ -39,3 +40,5 @@ text
 ### Early Return
 
 text
+
+## Padding

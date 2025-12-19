@@ -577,24 +577,6 @@
    (assert-keys options #{:collation :only :skip :sort})
    `(first (fetch-method (get-collection ~coll) ~query (assoc ~options :limit 1)))))
 
-(defmacro fetch-by-id
-  "Fetch a single document by its id.
-   
-   | Parameter    | Description
-   | ---          | ---
-   | `collection` | `keyword/string` The collection.
-   | `id`         | `ObjectId/string` The id.
-   | `:only`      | `optional map` A MongoDB map of fields to include or exclude.
-   
-   **Returns**
-   
-   A single document or `nil`."
-  {:added "1.0"
-   :arglists '([<collection> <id> & :only {}])}
-  [coll id & {:as options}]
-  (assert-keys options #{:only})
-  `(first (fetch-method (get-collection ~coll) {:_id ~id} (assoc ~options :limit 1))))
-
 (defn fetch-count
   "Count the number of documents returned.
    
@@ -783,14 +765,6 @@
      (*update-guard* ~update)
      (update-one-method ~coll ~query ~update ~options)))
 
-(defmacro update-by-id!
-  {:added "1.0"}
-  [coll id update & {:as options}]
-  (assert-keys options #{:collation :hint :upsert?})
-  `(catch-return
-     (*update-guard* ~update)
-     (update-one-method ~coll {:_id ~id} ~update ~options)))
-
 (defmacro set-one!
   "Shorthand for `update-one!` with a single `:$set` modifier.
    
@@ -809,14 +783,6 @@
   `(catch-return
      (*update-guard* {:$set ~update})
      (update-one-method ~coll ~query {:$set ~update} ~options)))
-
-(defmacro set-by-id!
-  {:added "1.0"}
-  [coll id update & {:as options}]
-  (assert-keys options #{:collation :hint :upsert?})
-  `(catch-return
-     (*update-guard* {:$set ~update})
-     (update-one-method ~coll {:_id ~id} {:$set ~update} ~options)))
 
 (defmacro fetch-and-update-one!
   "Update first matching document.
@@ -843,14 +809,6 @@
      (*update-guard* ~update)
      (fetch-and-update-method ~coll ~query ~update ~options)))
 
-(defmacro fetch-and-update-by-id!
-  {:added "1.0"}
-  [coll id update & {:as options}]
-  (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
-  `(catch-return
-     (*update-guard* ~update)
-     (fetch-and-update-method ~coll {:_id ~id} ~update ~options)))
-
 (defmacro fetch-and-set-one!
   "Shorthand for `fetch-and-update-one!` with a single `:$set` modifier.
    
@@ -869,14 +827,6 @@
   `(catch-return
      (*update-guard* {:$set ~update})
      (fetch-and-update-method ~coll ~query {:$set ~update} ~options)))
-
-(defmacro fetch-and-set-by-id!
-  {:added "1.0"}
-  [coll id update & {:as options}]
-  (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
-  `(catch-return
-     (*update-guard* {:$set ~update})
-     (fetch-and-update-method ~coll {:_id ~id} {:$set ~update} ~options)))
 
 ; ------------------------
 ; Replace
@@ -908,14 +858,6 @@
      (*replace-guard* ~doc)
      (replace-method ~coll ~query ~doc ~options)))
 
-(defmacro replace-by-id!
-  {:added "1.0"}
-  [coll id doc & {:as options}]
-  (assert-keys options #{:collation :hint :upsert?})
-  `(catch-return
-     (*replace-guard* ~doc)
-     (replace-method ~coll {:_id ~id} ~doc ~options)))
-
 (defmacro fetch-and-replace-one!
   {:added "1.0"}
   [coll query doc & {:as options}]
@@ -923,14 +865,6 @@
   `(catch-return
      (*replace-guard* ~doc)
      (fetch-and-replace-method ~coll ~query ~doc ~options)))
-
-(defmacro fetch-and-replace-by-id!
-  {:added "1.0"}
-  [coll id doc & {:as options}]
-  (assert-keys options #{:collation :hint :only :sort :return-new? :upsert?})
-  `(catch-return
-     (*replace-guard* ~doc)
-     (fetch-and-replace-method ~coll {:_id ~id} ~doc ~options)))
 
 ; ------------------------
 ; Delete
@@ -978,23 +912,11 @@
   (assert-keys options #{:collation :hint})
   `(delete-one-method ~coll ~query ~options))
 
-(defmacro delete-by-id!
-  {:added "1.0"}
-  [coll id & {:as options}]
-  (assert-keys options #{:collation :hint})
-  `(delete-one-method ~coll {:_id ~id} ~options))
-
 (defmacro fetch-and-delete-one!
   {:added "1.0"}
   [coll query & {:as options}]
   (assert-keys options #{:collation :hint})
   `(fetch-and-delete-method ~coll ~query ~options))
-
-(defmacro fetch-and-delete-by-id!
-  {:added "1.0"}
-  [coll id & {:as options}]
-  (assert-keys options #{:collation :hint})
-  `(fetch-and-delete-method ~coll {:_id ~id} ~options))
 
 ; ------------------------
 ; Transaction

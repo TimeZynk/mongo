@@ -21,9 +21,9 @@
 
 (extend-protocol Convert
   PersistentVector
-  (list->map [l]
+  (list->map [v]
     (->> (repeat 1)
-         (interleave l)
+         (interleave v)
          (apply assoc {})))
 
   PersistentArrayMap

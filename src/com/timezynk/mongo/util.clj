@@ -146,6 +146,19 @@
   nil
   (->object-id [_] nil))
 
+(defprotocol IsObjectId
+  "Check if valid ObjectId or valid string."
+  (object-id? [v]))
+
+(extend-protocol IsObjectId
+  String
+  (object-id? [s]
+    (ObjectId/isValid s))
+
+  ObjectId
+  (object-id? [_o]
+    true))
+
 ; ------------------------
 ; String
 ; ------------------------
