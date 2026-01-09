@@ -1,9 +1,11 @@
 (ns com.timezynk.mongo.test.files.upload
   (:require
    [clojure.java.io :as io]
+   [clojure.set :as set]
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
    [com.timezynk.mongo.files :as mf]
+   [com.timezynk.mongo.hooks :as mh]
    [com.timezynk.mongo.test.utils.db-utils :as dbu])
   (:import [org.bson.types ObjectId]))
 
@@ -58,3 +60,12 @@
   (is (= [{:a 3}]
          (->> (mf/info bucket {})
               (map :metadata)))))
+
+(deftest upload-with-id
+  (let [id (ObjectId.)]
+    (mh/with-hooks {:read #(set/rename-keys % {:_id :id})}
+      (is (nil? (mf/upload! nil (.getBytes "ABC") db-name :_id id)))
+      (is (= id
+             (-> (mf/info)
+                 (first)
+                 (:id)))))))

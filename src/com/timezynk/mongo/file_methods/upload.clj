@@ -8,8 +8,9 @@
   (:import [com.mongodb.client.gridfs GridFSBucket]
            [com.mongodb.client.gridfs.model GridFSUploadOptions]
            [java.io InputStream]
-           [org.bson BsonDocumentWrapper]
-           [org.bson.codecs DocumentCodec DecoderContext]))
+           [org.bson BsonDocumentWrapper BsonObjectId]
+           [org.bson.codecs DocumentCodec DecoderContext]
+           [org.bson.types ObjectId]))
 
 (defn- upload-options [{:keys [chunk-size metadata]}]
   (cond-> (GridFSUploadOptions.)
@@ -25,14 +26,18 @@
     {:session (some? *mongo-session*)
      :options (coll? options)}))
 
-(defmethod upload {:session true :options true} [bucket file stream options]
-  (.uploadFromStream bucket *mongo-session* file stream (upload-options options)))
+(defmethod upload {:session true :options true} [bucket file stream {:keys [_id] :as options}]
+  (if _id
+    (.uploadFromStream bucket *mongo-session* (BsonObjectId. _id) file stream (upload-options options))
+    (.uploadFromStream bucket *mongo-session* file stream (upload-options options))))
 
 (defmethod upload {:session true :options false} [bucket file stream _options]
   (.uploadFromStream bucket *mongo-session* file stream))
 
-(defmethod upload {:session false :options true} [bucket file stream options]
-  (.uploadFromStream bucket file stream (upload-options options)))
+(defmethod upload {:session false :options true} [bucket file stream {:keys [_id] :as options}]
+  (if _id
+    (.uploadFromStream bucket (BsonObjectId. _id) file stream (upload-options options))
+    (.uploadFromStream bucket file stream (upload-options options))))
 
 (defmethod upload {:session false :options false} [bucket file stream _options]
   (.uploadFromStream bucket file stream))
@@ -49,8 +54,10 @@
 (defmethod ->stream InputStream [input-stream]
   input-stream)
 
-(defn upload-method [^GridFSBucket bucket input database-file options]
-  {:pre [(= (type database-file) String)]}
+(defn upload-method [^GridFSBucket bucket input database-file {:keys [_id] :as options}]
+  {:pre [(= (type database-file) String)
+         (or (nil? _id)
+             (= (type _id) ObjectId))]}
   (with-open [stream (->stream input)]
     (let [id (upload bucket database-file stream options)]
       (when (:prune? options)

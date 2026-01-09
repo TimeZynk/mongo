@@ -211,6 +211,7 @@
    | `input`         | `string/byte[]/stream` The input to store, either a file name, byte array, or input stream.
    | `database-file` | `string/nil` File name to store in database. If not set or `nil` use the input string.
    | `:chunk-size`   | `optional integer` Chunk size in bytes.
+   | `:_id`          | `optional ObjectId` Custom file id.
    | `:metadata`     | `optional map` File metadata.
    | `:prune?`       | `optional boolean` Remove previous revisions. Default false.
 
@@ -223,7 +224,7 @@
   ([input] `(upload! nil ~input nil))
   ([input database-file] `(upload! nil ~input ~database-file))
   ([bucket input database-file & {:as options}]
-   (assert-keys options #{:chunk-size :metadata :prune?})
+   (assert-keys options #{:chunk-size :_id :metadata :prune?})
    `(upload-method (get-filebucket ~bucket) ~input (or ~database-file ~input) ~options)))
 
 (defmacro delete!
