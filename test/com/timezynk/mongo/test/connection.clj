@@ -2,12 +2,11 @@
   (:require
    [clojure.test :refer [deftest is testing]]
    [com.timezynk.mongo :as m]
+   [com.timezynk.mongo.assert :refer [catch-assert]]
    [com.timezynk.mongo.util :as u]))
 
 (deftest write-concern
-  (is (thrown-with-msg? IllegalArgumentException
-                        #"No matching clause: :w4"
-                        (m/create-connection! "mongodb://localhost:27017/db" :write-concern :w4))))
+  (is (= 1 (catch-assert (m/create-connection! "mongodb://localhost:27017/db" :write-concern :w4)))))
 
 (deftest disjoint
   (testing "Switch to another connection after exiting connection scope"

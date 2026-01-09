@@ -1,9 +1,11 @@
 (ns ^:no-doc com.timezynk.mongo.helpers
   (:require
+   [clojure.set :refer [rename-keys]]
    [com.timezynk.mongo.codecs.collection :refer [collection-provider]]
    [com.timezynk.mongo.codecs.distinct :refer [distinct-provider]]
    [com.timezynk.mongo.codecs.map :refer [map-provider]]
-   [com.timezynk.mongo.config :refer [*mongo-database*]])
+   [com.timezynk.mongo.config :refer [*mongo-database*]]
+   [com.timezynk.mongo.hooks :refer [with-hooks]])
   (:import [clojure.lang PersistentArrayMap]
            [com.mongodb.client MongoCollection]
            [com.mongodb.client.gridfs GridFSBuckets]
@@ -26,3 +28,12 @@
   `(if ~bucket
      (GridFSBuckets/create *mongo-database* (name ~bucket))
      (GridFSBuckets/create *mongo-database*)))
+
+(defmacro by-id [& body]
+  `(with-hooks {:write identity}
+     ~@body))
+
+(defmacro file-hooks [& body]
+  `(with-hooks {:write #(rename-keys % {:chunk-size  :chunkSize
+                                        :upload-date :uploadDate})}
+     ~@body))

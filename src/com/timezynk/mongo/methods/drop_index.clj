@@ -2,8 +2,7 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert :refer [list->map]]
-   [com.timezynk.mongo.helpers :as h])
+   [com.timezynk.mongo.convert :refer [list->map]])
   (:import [clojure.lang PersistentArrayMap PersistentVector]))
 
 (defprotocol DropIndex
@@ -27,10 +26,10 @@
     (some? *mongo-session*)))
 
 (defmethod drop-index-method true [coll index]
-  (.dropIndex (h/get-collection coll)
+  (.dropIndex coll
               *mongo-session*
               (->index index)))
 
 (defmethod drop-index-method false [coll index]
-  (.dropIndex (h/get-collection coll)
+  (.dropIndex coll
               (->index index)))

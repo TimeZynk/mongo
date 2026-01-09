@@ -2,6 +2,7 @@
   "Convenience functions for automating certain tasks."
   (:require
    [clojure.tools.logging :as log]
+   [com.timezynk.mongo.codecs.byte-array :as codec]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database*]]
    [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.connection :refer [connection-method]]
@@ -20,7 +21,7 @@
 
 (defn set-mongo-uri!
   "Set connection string prior to creating a persistent binding.
-   
+
    | Parameter | Description
    | ---       | ---
    | `uri`     | `string` Database location."
@@ -46,12 +47,12 @@
 (defmacro wrap-mongo
   "Functionally set up or change mongodb connection, creating a persistent connection from a previously defined connection string.
    Reverts to earlier settings when leaving scope.
-   
+
    1. Looks for a connection string set by a prior call to `set-mongo-uri!`.
    2. Failing that, retrieves a connection string `MONGO_URI` environment variable.
 
    The connection string is used only once to set up the persistent connection.
-   
+
    | Parameter | Description
    | ---       | ---
    | `body`    | Encapsulated program calling the database.
@@ -61,7 +62,7 @@
    The result of the last encapsulated expression.
 
    **Examples**
-   
+
    ```clojure
    (set-mongo-uri! \"mongodb://localhost:27017/my-database\")
    (wrap-mongo
@@ -79,13 +80,13 @@
 
 (defn wrap-request
   "Wrap a request for a middleware setup
-   
+
    | Parameter | Description
    | ---       | ---
    | `handler` | `fn` A request handler function.
 
    **Returns**
-   
+
    A function that takes a `request` paramater and makes a call to `handler` with that request, inside a `wrap-mongo` call."
   {:added "1.0"
    :arglists '([<handler>])}
@@ -113,7 +114,7 @@
   {:added "1.0"}
   [coll index]
   (try
-    (drop-index-method coll index)
+    (drop-index-method (h/get-collection coll) index)
     (catch MongoCommandException e
       (when (not= (.getErrorCode e) 27)
         (throw e)))))
@@ -123,45 +124,66 @@
 ; ------------------------
 
 (defprotocol ToObjectId
-  "Convert to ObjectId."
-  ;; {:added "1.0"}
+  ^{:doc "Convert to ObjectId."
+    :added "1.0"}
   (->object-id [v]))
 
 (extend-protocol ToObjectId
   Keyword
-  (->object-id [k]
+  (^{:added "1.0"} ->object-id [k]
     (ObjectId. (name k)))
 
   String
-  (->object-id [s]
+  (^{:added "1.0"} ->object-id [s]
     (ObjectId. s))
 
   Symbol
-  (->object-id [s]
+  (^{:added "1.0"} ->object-id [s]
     (ObjectId. (name s)))
 
   ObjectId
-  (->object-id [o] o)
+  (^{:added "1.0"} ->object-id [o] o)
 
   nil
-  (->object-id [_] nil))
+  (^{:added "1.0"} ->object-id [_] nil))
 
-(defprotocol IsObjectId
-  "Check if valid ObjectId or valid string."
-  (object-id? [v]))
+(defmulti object-id?
+  ^{:doc "Check if ObjectId or valid string."
+    :added "1.0"}
+  type)
 
-(extend-protocol IsObjectId
-  String
-  (object-id? [s]
-    (ObjectId/isValid s))
+(defmethod object-id? String
+  ^{:added "1.0"}
+  [s]
+  (ObjectId/isValid s))
 
-  ObjectId
-  (object-id? [_o]
-    true))
+(defmethod object-id? ObjectId
+  ^{:added "1.0"}
+  [_o]
+  true)
+
+(defmethod object-id? :default
+  ^{:added "1.0"}
+  [_v]
+  false)
 
 ; ------------------------
 ; String
 ; ------------------------
 
-(defn random-string [size]
-  (apply str (repeatedly size #(rand-nth "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"))))
+(defn random-string
+  {:added "1.0"}
+  [size]
+  (->> (repeatedly size #(rand-nth "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"))
+       (apply str)))
+
+(defmulti ->string
+  ^{:doc "Convert to string."
+    :added "1.0"}
+  type)
+
+(defmethod ->string (codec/type-byte-array)
+  ^{:added "1.0"}
+  [arr]
+  (->> (map char arr)
+       (apply str)))

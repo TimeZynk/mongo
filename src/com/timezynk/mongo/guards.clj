@@ -10,9 +10,9 @@
 
 (defmacro return
   "Return early without making any API call.
-   
+
    **Examples**
-   
+
    Ignore any insert calls with a message:
 
    ```clojure
@@ -79,16 +79,16 @@
    <update-fn> guards `update!`, `update-one!`, `fetch-and-update-one!`. By default, it will
    throw exceptions for a list payload and a root field that isn't a modifier. List
    handling is a bit wonky. Since it's not needed, it's better to not accept it.
-   
+
    | Parameter  | Description
    | ---        | ---
    | `:insert`  | `optional fn` Called for `insert!`.
    | `:update`  | `optional fn` Called for `update!`, `update-one!`, `fetch-and-update-one!`.
    | `:replace` | `optional fn` Called for `replace-one!`, `fetch-and-replace-one!`.
    | `body`     | Encapsulated program calling the database.
-   
+
    **Examples**
-   
+
    ```clojure
    ; Remove guards for payload:
    (with-guards {:insert identity}

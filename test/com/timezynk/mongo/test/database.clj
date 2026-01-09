@@ -2,6 +2,7 @@
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]
+   [com.timezynk.mongo.assert :refer [catch-assert]]
    [com.timezynk.mongo.test.utils.db-utils :as dbu]))
 
 (use-fixtures :once #'dbu/test-suite-db-fixture)
@@ -22,6 +23,4 @@
           (m/drop-collection! :users))))))
 
 (deftest write-concern
-  (is (thrown-with-msg? IllegalArgumentException
-                        #"No matching clause: :w4"
-                        (m/with-write-concern :w4 ()))))
+  (is (= 1 (catch-assert (m/with-write-concern :w4 ())))))

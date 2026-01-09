@@ -2,7 +2,6 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.methods.fetch-and-update :refer [get-options]]
    [com.timezynk.mongo.padding :refer [*replace-padding*]])
   (:import [org.bson Document]
@@ -16,14 +15,14 @@
     (some? *mongo-session*)))
 
 (defmethod fetch-and-replace-method true [coll query doc options]
-  (.findOneAndReplace (h/get-collection coll)
+  (.findOneAndReplace coll
                       *mongo-session*
                       (->bson query)
                       (*replace-padding* doc)
                       (fetch-and-replace-options options)))
 
 (defmethod fetch-and-replace-method false [coll query doc options]
-  (.findOneAndReplace (h/get-collection coll)
+  (.findOneAndReplace coll
                       (->bson query)
                       (*replace-padding* doc)
                       (fetch-and-replace-options options)))

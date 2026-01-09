@@ -12,15 +12,15 @@
 (deftest valid-keys
   (testing "Valid guard keys"
     (is (= 0 (catch-assert
-              (mg/with-guards {:insert ()
-                               :update ()
-                               :replace ()})))))
+               (mg/with-guards {:insert ()
+                                :update ()
+                                :replace ()})))))
   (testing "Invalid guard key"
     (is (= 1 (catch-assert
-              (mg/with-guards {:insert ()
-                               :update ()
-                               :replace ()
-                               :a ()}))))))
+               (mg/with-guards {:insert ()
+                                :update ()
+                                :replace ()
+                                :a ()}))))))
 
 (deftest insert-guard
   (testing "Default guard allows empty list"

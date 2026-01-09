@@ -4,23 +4,23 @@
 
 Clojure and MongoDB handle types differently. Converting between different types is handled using *codecs*. MongoDB types are declared internally using the `org.bson.BsonType` enum class. Each is matched to a codec that handles one or many external types:
 
-| BsonType           | Clojure (or other) type
-| ---                | ---
-| ARRAY              | **PersistentVector**, LazySeq, PersistentHashSet
-| BINARY             | byte[], java.util.UUID
-| BOOLEAN            | Boolean
-| DATE_TIME          | java.util.Date
-| DECIMAL128         | java.math.BigDecimal
-| DOCUMENT           | PersistentArrayMap
-| DOUBLE             | Double
-| INT32              | **Long**, Integer
-| INT64              | Long
-| OBJECT_ID          | org.bson.types.ObjectId
-| REGULAR_EXPRESSION | java.util.regex.Pattern
-| STRING             | String
-| SYMBOL             | Symbol
-| TIMESTAMP          | **Long**, org.bson.types.BSONTimestamp
-| UNDEFINED          | **nil**, org.bson.BsonUndefined
+| BsonType           | Clojure (or other) type                          |
+| ------------------ | ------------------------------------------------ |
+| ARRAY              | **PersistentVector**, LazySeq, PersistentHashSet |
+| BINARY             | byte[], java.util.UUID                           |
+| BOOLEAN            | Boolean                                          |
+| DATE_TIME          | java.util.Date                                   |
+| DECIMAL128         | java.math.BigDecimal                             |
+| DOCUMENT           | PersistentArrayMap                               |
+| DOUBLE             | Double                                           |
+| INT32              | **Long**, Integer                                |
+| INT64              | Long                                             |
+| OBJECT_ID          | org.bson.types.ObjectId                          |
+| REGULAR_EXPRESSION | java.util.regex.Pattern                          |
+| STRING             | String                                           |
+| SYMBOL             | Symbol                                           |
+| TIMESTAMP          | **Long**, org.bson.types.BSONTimestamp           |
+| UNDEFINED          | **nil**, org.bson.BsonUndefined                  |
 
 Any external type not represented in the table above can be added in a custom codec, and any of the represented ones can be replaced with a different codec.
 
@@ -118,12 +118,12 @@ MongoDB expects a `java.util.Date` object for storing date-time values. This cla
       (-> (.readDatetime reader)
           (java.time.Instant/ofEpochMilli)
           (java.time.LocalDateTime/from)))
-    
+
     (encode [_this writer value _encoder-context]
       (->> (java.time.Instant/from value)
            (.toEpochMilli)
            (.writeDatetime writer)))
-    
+
     (getEncoderClass [_this]
       java.time.LocalDateTime)))
 ```

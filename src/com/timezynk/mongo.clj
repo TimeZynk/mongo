@@ -1,15 +1,15 @@
 (ns com.timezynk.mongo
   "A functional Clojure wrapper for the modern Java MongoDB API."
   ^{:doc "A wrapper for the com.mongodb.client Java API.
-          
+
           Requires MongoDB version 5.0 or later."}
   (:refer-clojure :exclude [distinct])
   (:require
-   [com.timezynk.mongo.assert :refer [assert-keys]]
+   [com.timezynk.mongo.assert :refer [assert-keys assert-value]]
    [com.timezynk.mongo.config :refer [*mongo-client* *mongo-codecs* *mongo-database* *mongo-session* *mongo-types*]]
    [com.timezynk.mongo.convert :refer [it->clj]]
    [com.timezynk.mongo.guards :refer [catch-return *insert-guard* *replace-guard* *update-guard*]]
-   [com.timezynk.mongo.helpers :refer [codec-registry get-collection]]
+   [com.timezynk.mongo.helpers :refer [by-id codec-registry get-collection]]
    [com.timezynk.mongo.methods.aggregate :refer [aggregate-method]]
    [com.timezynk.mongo.methods.collation :refer [collation-method]]
    [com.timezynk.mongo.methods.connection :refer [get-read-concern get-write-concern connection-method]]
@@ -44,7 +44,7 @@
 
 (defmacro create-connection!
   "Create a connection object.
-   
+
    | Parameter        | Description
    | ---              | ---
    | `uri`            | `string` Database location.
@@ -69,11 +69,11 @@
    |                  | [Read more about write concerns](https://www.mongodb.com/docs/manual/reference/write-concern/).
 
    **Returns**
-   
+
    The connection object.
-   
+
    **Examples**
-   
+
    ```clojure
    ; Create a connection with default options
    (create-connection! \"mongodb://localhost:27017/my-database\")
@@ -85,22 +85,25 @@
    :arglists '([<uri> & :retry-reads? <boolean> :retry-writes? <boolean> :read-concern [:available :default :linearizable :local :majority :snapshot] :write-concern [:acknowledged :journaled :majority :unacknowledged :w1 :w2 :w3]])}
   ^MongoClientSettings [^String uri & {:as options}]
   (assert-keys options #{:retry-reads? :retry-writes? :read-concern :write-concern})
+  (assert-value (:read-concern options) #{:available :default :linearizable :local :majority :snapshot})
+  (assert-value (:write-concern options) #{:acknowledged :journaled :majority :unacknowledged :w1 :w2 :w3})
   `(connection-method ~uri ~options))
 
 (defn close-connection!
   [conn]
-  (.close (:client conn)))
+  (.close (:client conn))
+  (watch-config/close-watch-ids))
 
 (defmacro with-mongo
   "Functionally set up or change mongodb connection.
    Reverts to earlier settings when leaving scope.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `uri`        | `string` Connection string. See the [API documentation](http://mongodb.github.io/mongo-java-driver/4.5/apidocs/mongodb-driver-core/com/mongodb/ConnectionString.html) for more details.
    | `connection` | `connection` A connection object.
    | `body`       | Encapsulated program utilizing the connection.
-   
+
    **Returns**
 
    The result of the last encapsulated expression.
@@ -126,8 +129,8 @@
          ~@body
          (finally
            (when (= (type ~conn) String)
-             (.close *mongo-client*))
-           (watch-config/close-watch-ids))))))
+             (.close *mongo-client*)
+             (watch-config/close-watch-ids)))))))
 
 ; ------------------------
 ; Database
@@ -136,7 +139,7 @@
 (defmacro with-database
   "Functionally set up or change database.
    Reverts to earlier settings when leaving scope.
-   
+
    | Parameter  | Description
    | ---        | ---
    | `database` | `string` Name of database to use.
@@ -147,7 +150,7 @@
    The result of the last encapsulated expression.
 
    **Examples**
-   
+
    ```clojure
    (with-database \"my-database-2\"
      (insert! :users {:name \"My Name\"})
@@ -163,9 +166,9 @@
 
 (defn list-databases
   "List databases for this connection.
-   
+
    **Returns**
-   
+
    A lazy sequence of database objects."
   {:added "1.0"}
   []
@@ -181,7 +184,7 @@
 (defmacro with-codecs
   "Add or change codecs.
    Reverts to earlier settings when leaving scope.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `codecs`     | `list` A list of codec objects.
@@ -204,20 +207,21 @@
   "Set read concern of current active database.
    Reverts to earlier settings when leaving scope.
 
-   | Parameter        | Description
-   | ---              | ---
-   | `:read-concern`  | `optional keyword enum` Set read concern:
-   |                  | `:available` The query returns data from the instance with no guarantee that the data has been written to a majority of the replica set members (i.e. may be rolled back).
-   |                  | `:default` Sets the default concern, which is usually `local`
-   |                  | `:linearizable` The query returns data that reflects all successful majority-acknowledged writes that completed prior to the start of the read operation.
-   |                  | `:local` The query returns data from the instance with no guarantee that the data has been written to a majority of the replica set members (i.e. may be rolled back).
-   |                  | `:majority` The query returns the data that has been acknowledged by a majority of the replica set members. The documents returned by the read operation are durable, even in the event of failure.
-   |                  | `:snapshot` Returns majority-committed data as it appears across shards from a specific single point in time in the recent past.
-   
+   | Parameter      | Description
+   | ---            | ---
+   | `read-concern` | `keyword enum` Set read concern:
+   |                | `:available` The query returns data from the instance with no guarantee that the data has been written to a majority of the replica set members (i.e. may be rolled back).
+   |                | `:default` Sets the default concern, which is usually `local`
+   |                | `:linearizable` The query returns data that reflects all successful majority-acknowledged writes that completed prior to the start of the read operation.
+   |                | `:local` The query returns data from the instance with no guarantee that the data has been written to a majority of the replica set members (i.e. may be rolled back).
+   |                | `:majority` The query returns the data that has been acknowledged by a majority of the replica set members. The documents returned by the read operation are durable, even in the event of failure.
+   |                | `:snapshot` Returns majority-committed data as it appears across shards from a specific single point in time in the recent past.
+
    [Manual reference](https://www.mongodb.com/docs/manual/reference/read-concern/)"
   {:added "1.0"
    :arglists '([<read-concern> & <body>])}
   [read-concern & body]
+  (assert-value read-concern #{:available :default :linearizable :local :majority :snapshot})
   `(binding [*mongo-database* (.withReadConcern *mongo-database* (get-read-concern ~read-concern))]
      ~@body))
 
@@ -225,40 +229,41 @@
   "Set write concern of current active database.
    Reverts to earlier settings when leaving scope.
 
-   | Parameter        | Description
-   | ---              | ---
-   | `:write-concern` | `optional keyword enum` Set write concern:
-   |                  | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default.
-   |                  | `:journaled` Wait for the server to group commit to the journal file on disk.
-   |                  | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. Usually the default option.
-   |                  | `:unacknowledged` Return as soon as the message is written to the socket.
-   |                  | `:w1` Wait for acknowledgement from a single member.
-   |                  | `:w2` Wait for acknowledgement from two members.
-   |                  | `:w3` Wait for acknowledgement from three members.
-   
+   | Parameter       | Description
+   | ---             | ---
+   | `write-concern` | `keyword enum` Set write concern:
+   |                 | `:acknowledged` Write operations that use this write concern will wait for acknowledgement. Default.
+   |                 | `:journaled` Wait for the server to group commit to the journal file on disk.
+   |                 | `:majority` Exceptions are raised for network issues, and server errors; waits on a majority of servers for the write operation. Usually the default option.
+   |                 | `:unacknowledged` Return as soon as the message is written to the socket.
+   |                 | `:w1` Wait for acknowledgement from a single member.
+   |                 | `:w2` Wait for acknowledgement from two members.
+   |                 | `:w3` Wait for acknowledgement from three members.
+
    [Manual reference](https://www.mongodb.com/docs/manual/reference/write-concern/)"
   {:added "1.0"
    :arglists '([<write-concern> & <body>])}
   [write-concern & body]
+  (assert-value write-concern #{:acknowledged :journaled :majority :unacknowledged :w1 :w2 :w3})
   `(binding [*mongo-database* (.withWriteConcern *mongo-database* (get-write-concern ~write-concern))]
      ~@body))
 
 (defn server-status
   "Fetch information about the server.
-   
+
    | Parameter | Description
    | ---       | ---
-   | `options` | `optional keywords` Fields to be included in the result.
+   | `options` | `optional keyword`s Fields to be included in the result.
    |           | When providing options, fields not included will be excluded from result.
    |           | Not providing any option will yield a full result, including all fields.
-   
+
    Options are not checked for correctness. Valid options may vary depending on the MongoDB version.
    [Manual reference](https://www.mongodb.com/docs/manual/reference/command/serverStatus/).
-   
+
    **Returns**
-   
+
    The status object.
-   
+
    **Examples**
    ```clojure
    (server-status :asserts :queues)
@@ -280,22 +285,22 @@
 
 (defn run-command!
   "Run custom commands.
-   
+
    | Parameter   | Description
    | ---         | ---
    | `command`   | `keyword` The command to be executed.
-   | `parameter` | The parameter fo the command. Typically just the number 1.
+   | `parameter` | Parameter for the command. Typically just the number 1.
    | `options`   | Key-value pairs of optional parameters specific to the command.
-   
+
    Options are not checked for correctness.
    [Manual reference](https://www.mongodb.com/docs/manual/reference/command/)
-   
+
    **Returns**
-   
+
    Results vary depending on the command.
-   
+
    **Examples**
-   
+
    ```clojure
    (run-command! :collStats \"coll-name\" :scale 1)
    ```"
@@ -310,7 +315,7 @@
 
 (defmacro collation
   "Create collation object.
-   
+
    | Parameter            | Description
    | ---                  | ---
    | `locale`             | `string` The two-letter ICU locale string.
@@ -334,7 +339,7 @@
    |                      | `:secondary` Collation performs comparisons up to secondary differences, such as diacritics. That is, collation performs comparisons of base characters (primary differences) and diacritics (secondary differences). Differences between base characters takes precedence over secondary differences.
    |                      | `:tertiary` Collation performs comparisons up to tertiary differences, such as case and letter variants. That is, collation performs comparisons of base characters (primary differences), diacritics (secondary differences), and case and variants (tertiary differences). Differences between base characters takes precedence over secondary differences, which takes precedence over tertiary differences. Default level.
    |                      | `:quaternary` Limited for specific use case to consider punctuation when levels 1-3 ignore punctuation or for processing Japanese text.
-   
+
    [Manual reference](https://www.mongodb.com/docs/v5.3/reference/collation/)
 
    **Returns**
@@ -353,6 +358,10 @@
   ^Collation [locale & {:as options}]
   (assert-keys options #{:alternate :backwards? :case-first :case-level? :max-variable
                          :normalization? :numeric-ordering? :strength})
+  (assert-value (:alternate options) #{:non-ignorable :shifted})
+  (assert-value (:case-first options) #{:lower :off :upper})
+  (assert-value (:max-variable options) #{:punct :space})
+  (assert-value (:strength options) #{:identical :primary :quaternary :secondary :tertiary})
   `(collation-method ~locale ~options))
 
 ; ------------------------
@@ -368,9 +377,9 @@
 
 (defn list-collection-names
   "List keyworded names of all collections in database.
-   
+
    **Returns**
-   
+
    A lazy sequence of keywords."
   {:added "1.0"}
   []
@@ -381,7 +390,7 @@
 
 (defn collection-info
   "List full info of collection.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` Collection name."
@@ -394,7 +403,7 @@
 
 (defmacro create-collection!
   "Create collection.
-   
+
    | Parameter       | Description
    | ---             | ---
    | `collection`    | `keyword/string` Collection name.
@@ -406,13 +415,13 @@
    |                 | `:strict` Apply validation rules to all inserts and all updates. Default value.
    |                 | `:moderate` Applies validation rules to inserts and to updates on existing valid documents.
    |                 | `:off` No validation for inserts or updates.
-   
+
    **Returns**
-   
+
    The collection object.
-   
+
    **Examples**
-   
+
    ```clojure
    ; Collection with exactly one required field `name` of type `string`:
    (create-collection! :users :schema {:name (string)})
@@ -425,11 +434,12 @@
    :arglists '([<collection> & :collation <collation object> :full-change? <boolean> :level [:strict :moderate :off] :schema {} :validation {}])}
   [coll & {:as options}]
   (assert-keys options #{:collation :full-change? :level :schema :validation})
+  (assert-value (:level options) #{:moderate :off :strict})
   `(create-collection-method (name ~coll) ~options))
 
 (defmacro modify-collection!
   "Make updates to a collection.
-   
+
    | Parameter       | Description
    | ---             | ---
    | `collection`    | `keyword/string` Collection name.
@@ -443,13 +453,13 @@
    |                 | `:moderate` Applies validation rules to inserts and to updates on existing valid documents.
    |                 | `:off` No validation for inserts or updates.
    | `:validate?`    | `optional boolean` Ensure that existing documents in the collection conform to the new schema or validation. Default `false`.
-   
+
    **Returns**
-   
+
    The collection object.
-   
+
    **Examples**
-   
+
    ```clojure
    (modify-collection! :coll :name :coll-2)
    ```"
@@ -457,6 +467,7 @@
    :arglists '([<collection> & :collation <collation object> :full-change? <boolean> :level [:strict :moderate :off] :name <new name> :schema {} :validation {}])}
   [coll & {:as options}]
   (assert-keys options #{:collation :full-change? :level :name :schema :validate? :validation})
+  (assert-value (:level options) #{:moderate :off :strict})
   `(modify-collection-method ~coll ~options))
 
 (defn drop-collection!
@@ -464,7 +475,7 @@
    :arglists '([<collection>])}
   [coll]
   {:pre [coll]}
-  (drop-collection-method coll))
+  (drop-collection-method (get-collection coll)))
 
 ; ------------------------
 ; Index
@@ -479,7 +490,7 @@
 
 (defmacro create-index!
   "Create an index for a collection.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `collection`   | `keyword/string` Collection name.
@@ -490,13 +501,13 @@
    | `:name`        | `optional string` A custom name for the index.
    | `:sparse?`     | `optional boolean` Don't index null values. Default `false`.
    | `:unique?`     | `optional boolean` Index values must be unique. Default `false`.
-   
+
    **Returns**
-   
+
    The index name.
 
    **Examples**
-   
+
    ```clojure
    ; Index over field-1 in descending order, field-2 as hashed
    (create-index! :coll {:field-1 -1 :field-2 \"hashed\"})
@@ -511,13 +522,13 @@
    :arglists '([<collection> <keys> & :collation <collation object> :background? <boolean> :name <string> :filter {} :sparse? <boolean> :unique? <boolean>])}
   [coll keys & {:as options}]
   (assert-keys options #{:background? :collation :filter :name :sparse? :unique?})
-  `(create-index-method ~coll ~keys ~options))
+  `(create-index-method (get-collection ~coll) ~keys ~options))
 
 (defn drop-index!
   {:added "1.0"
    :arglists '([<collection> <index name>])}
   [coll index]
-  (drop-index-method coll index))
+  (drop-index-method (get-collection coll) index))
 
 ; ------------------------
 ; Fetch
@@ -525,7 +536,7 @@
 
 (defmacro fetch
   "Fetch documents from collection.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
@@ -535,11 +546,11 @@
    | `:only`      | `optional map/list` A map/list of fields to include or exclude.
    | `:skip`      | `optional integer` Number of documents to skip before fetching.
    | `:sort`      | `optional map` A MongoDB map of sorting criteria.
-   
+
    **Returns**
 
    A lazy sequence of matching documents.
-   
+
    **Examples**
 
    ```clojure
@@ -556,7 +567,7 @@
 
 (defmacro fetch-one
   "Return only the first document retrieved.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
@@ -565,9 +576,9 @@
    | `:only`      | `optional map` A MongoDB map of fields to include or exclude.
    | `:skip`      | `optional integer` Number of documents to skip before fetching.
    | `:sort`      | `optional map` A MongoDB map of sorting criteria.
-   
+
    **Returns**
-   
+
    A single document or `nil`."
   {:added "1.0"
    :arglists '([<collection>]
@@ -577,36 +588,55 @@
    (assert-keys options #{:collation :only :skip :sort})
    `(first (fetch-method (get-collection ~coll) ~query (assoc ~options :limit 1)))))
 
+(defmacro fetch-by-id
+  "Fetch a single document by its id.
+
+   | Parameter    | Description
+   | ---          | ---
+   | `collection` | `keyword/string` The collection.
+   | `id`         | The document id.
+   | `:only`      | `optional map` A MongoDB map of fields to include or exclude.
+
+   **Returns**
+
+   A single document or `nil`."
+  {:added "1.0"
+   :arglists '([<collection> <id> & :only {}])}
+  [coll id & {:as options}]
+  (assert-keys options #{:only})
+  `(first (by-id
+            (fetch-method (get-collection ~coll) {:_id ~id} (assoc ~options :limit 1)))))
+
 (defn fetch-count
   "Count the number of documents returned.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
    | `query`      | `map` A standard MongoDB query.
-   
+
    **Returns**
 
    Number of matching documents."
   {:added "1.0"
    :arglists '([<collection>] [<collection> <query>])}
   ([coll]       (fetch-count coll {}))
-  ([coll query] (count-method coll query)))
+  ([coll query] (count-method (get-collection coll) query)))
 
 (defmacro distinct
   "Fetch distinct values from a particular field.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
    | `field`      | `keyword/string` A field in the collection.
    | `query`      | `map` A standard MongoDB query.
    | `:validate?` | `optional boolean` The field must be part of the collection schema. Default false.
-   
+
    **Returns**
 
    A lazy sequence of distinct values.
-   
+
    **Examples**
 
    ```clojure
@@ -625,10 +655,7 @@
   ([coll field] `(distinct ~coll ~field {}))
   ([coll field query & {:as options}]
    (assert-keys options #{:validate?})
-   `(distinct-method ~coll
-                     (name ~field)
-                     ~query
-                     ~options)))
+   `(distinct-method ~coll (name ~field) ~query ~options)))
 
 ; ------------------------
 ; Insert
@@ -637,13 +664,13 @@
 (defmacro insert!
   "Insert one document or a list thereof in a collection.
    Inserting a list is atomic.
-   
+
    | Parameter       | Description
    | ---             | ---
    | `collection`    | `keyword/string` The collection.
    | `document`      | `map` A document.
    | `document-list` | `list(map)` A list of documents.
-   
+
    **Returns**
 
    The document/s with `_id` fields, either a single document or a lazy sequence.
@@ -662,7 +689,7 @@
   `(catch-return
      (*insert-guard* ~docs)
      (let [docs# (insert-padding ~docs)]
-       (-> (insert-method ~coll docs#)
+       (-> (insert-method (get-collection ~coll) docs#)
            (insert-result docs#)))))
 
 (defmacro insert-one!
@@ -675,7 +702,7 @@
      (catch-return
        (*insert-guard* ~doc)
        (let [doc# (insert-padding ~doc)]
-         (-> (insert-method ~coll doc#)
+         (-> (insert-method (get-collection ~coll) doc#)
              (insert-result doc#))))))
 
 ; ------------------------
@@ -684,7 +711,7 @@
 
 (defmacro update!
   "Update matching documents.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
@@ -693,14 +720,14 @@
    | `:collation` | `optional collation object` Collation used.
    | `:hint`      | `optional map/list` Indexing hint.
    | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
-   
+
    **Returns**
 
    ```clojure
    {:matched-count <number of matching documents>
     :modified-count <number of modified documents>}
    ```
-   
+
    **Examples**
 
    ```clojure
@@ -712,17 +739,17 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (update-method ~coll ~query ~update ~options)))
+     (update-method (get-collection ~coll) ~query ~update ~options)))
 
 (defmacro set!
   "Shorthand for `update!` with a single `:$set` modifier.
-   
+
    **Examples**
-  
+
   ```clojure
   (set! :coll {} {:a 1})
   ```
-  translates to: 
+  translates to:
   ```clojure
   (update! :coll {} {:$set {:a 1}})
   ```"
@@ -731,11 +758,11 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (update-method ~coll ~query {:$set ~update} ~options)))
+     (update-method (get-collection ~coll) ~query {:$set ~update} ~options)))
 
 (defmacro update-one!
   "Update first matching document.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
@@ -744,14 +771,14 @@
    | `:collation` | `optional collation object` Collation used.
    | `:hint`      | `optional map/list` Indexing hint.
    | `:upsert?`   | `optional boolean` If no document is found, create a new one. Default is `false`.
-   
+
    **Returns**
-   
+
    ```clojure
    {:matched-count <0 or 1>
     :modified-count <0 or 1>}
    ```
-   
+
    **Examples**
 
    ```clojure
@@ -763,17 +790,17 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (update-one-method ~coll ~query ~update ~options)))
+     (update-one-method (get-collection ~coll) ~query ~update ~options)))
 
 (defmacro set-one!
   "Shorthand for `update-one!` with a single `:$set` modifier.
-   
+
    **Examples**
-  
+
   ```clojure
   (set-one! :coll {} {:a 1})
   ```
-  translates to: 
+  translates to:
   ```clojure
   (update-one! :coll {} {:$set {:a 1}})
   ```"
@@ -782,19 +809,20 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (update-one-method ~coll ~query {:$set ~update} ~options)))
+     (update-one-method (get-collection ~coll) ~query {:$set ~update} ~options)))
 
 (defmacro fetch-and-update-one!
   "Update first matching document.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `collection`   | `keyword/string` The collection.
    | `query`        | `map` A standard MongoDB query.
-   | `:return-new?` | `optional boolean` Return the updated document? Default if `false`.
+   | `update`       | `map/list` A valid update document or pipeline.
    | `:collation`   | `optional collation object` Collation used.
-   | `:only`        | `optional map` A MongoDB map of fields to include or exclude.
    | `:hint`        | `optional map` Indexing hint.
+   | `:only`        | `optional map` A MongoDB map of fields to include or exclude.
+   | `:return-new?` | `optional boolean` Return the updated document? Default if `false`.
    | `:sort`        | `optional map` A MongoDB map of sorting criteria.
    | `:upsert?`     | `optional boolean` If no document is found, create a new one. Default is `false`.
 
@@ -802,22 +830,22 @@
 
    A single document or nil."
   {:added "1.0"
-   :arglists '([<collection> <query> & :return-new? <boolean> :upsert? <boolean> :collation <collation object> :only {} :hint {} :sort {}])}
+   :arglists '([<collection> <query> <update> & :return-new? <boolean> :upsert? <boolean> :collation <collation object> :only {} :hint {} :sort {}])}
   [coll query update & {:as options}]
   (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
   `(catch-return
      (*update-guard* ~update)
-     (fetch-and-update-method ~coll ~query ~update ~options)))
+     (fetch-and-update-method (get-collection ~coll) ~query ~update ~options)))
 
 (defmacro fetch-and-set-one!
   "Shorthand for `fetch-and-update-one!` with a single `:$set` modifier.
-   
+
    **Examples**
-  
+
    ```clojure
    (fetch-and-set-one! :coll {} {:a 1})
    ```
-   translates to: 
+   translates to:
    ```clojure
    (fetch-and-update-one! :coll {} {:$set {:a 1}})
    ```"
@@ -826,7 +854,90 @@
   (assert-keys options #{:collation :hint :only :return-new? :sort :upsert?})
   `(catch-return
      (*update-guard* {:$set ~update})
-     (fetch-and-update-method ~coll ~query {:$set ~update} ~options)))
+     (fetch-and-update-method (get-collection ~coll) ~query {:$set ~update} ~options)))
+
+(defmacro update-by-id!
+  "Update a single document by its id.
+
+   | Parameter    | Description
+   | ---          | ---
+   | `collection` | `keyword/string` The collection.
+   | `id`         | Document id.
+   | `update`     | `map/list` A valid update document or pipeline.
+
+   **Returns**
+
+   ```clojure
+   {:matched-count <0 or 1>
+    :modified-count <0 or 1>}
+   ```
+
+   **Examples**
+
+   ```clojure
+   (update-one!)
+   ```"
+  {:added "1.0"
+   :arglists '([<collection> <id> <update>])}
+  [coll id update]
+  `(catch-return
+     (*update-guard* ~update)
+     (by-id
+       (update-one-method (get-collection ~coll) {:_id ~id} ~update))))
+
+(defmacro set-by-id!
+  "Shorthand for `update-by-id!` with a single `:$set` modifier.
+
+  "
+  {:added "1.0"}
+  [coll id update]
+  `(catch-return
+     (*update-guard* {:$set ~update})
+     (by-id
+       (update-one-method (get-collection ~coll) {:_id ~id} {:$set ~update}))))
+
+(defmacro fetch-and-update-by-id!
+  "Update a single document by its id.
+
+   | Parameter      | Description
+   | ---            | ---
+   | `collection`   | `keyword/string` The collection.
+   | `id`           | Document id.
+   | `update`       | `map/list` A valid update document or pipeline.
+   | `:only`        | `optional map` A MongoDB map of fields to include or exclude.
+   | `:return-new?` | `optional boolean` Return the updated document? Default if `false`.
+
+   **Returns**
+
+   A single document or nil."
+  {:added "1.0"
+   :arglists '([<collection> <id> <update> & :return-new? <boolean> :only {}])}
+  [coll id update & {:as options}]
+  (assert-keys options #{:only :return-new?})
+  `(catch-return
+     (*update-guard* ~update)
+     (by-id
+       (fetch-and-update-method (get-collection ~coll) {:_id ~id} ~update ~options))))
+
+(defmacro fetch-and-set-by-id!
+  "Shorthand for `fetch-and-update-one!` with a single `:$set` modifier.
+
+   **Examples**
+
+   ```clojure
+   (fetch-and-set-one! :coll {} {:a 1})
+   ```
+   translates to:
+   ```clojure
+   (fetch-and-update-one! :coll {} {:$set {:a 1}})
+   ```"
+  {:added "1.0"}
+  [coll id update & {:as options}]
+  (assert-keys options #{:only :return-new?})
+  `(catch-return
+     (*update-guard* {:$set ~update})
+     (by-id
+       (fetch-and-update-method (get-collection ~coll) {:_id ~id} {:$set ~update} ~options))))
 
 ; ------------------------
 ; Replace
@@ -834,7 +945,7 @@
 
 (defmacro replace-one!
   "Replace a single document.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
@@ -856,7 +967,7 @@
   (assert-keys options #{:collation :hint :upsert?})
   `(catch-return
      (*replace-guard* ~doc)
-     (replace-method ~coll ~query ~doc ~options)))
+     (replace-method (get-collection ~coll) ~query ~doc ~options)))
 
 (defmacro fetch-and-replace-one!
   {:added "1.0"}
@@ -864,7 +975,39 @@
   (assert-keys options #{:collation :hint :only :sort :return-new? :upsert?})
   `(catch-return
      (*replace-guard* ~doc)
-     (fetch-and-replace-method ~coll ~query ~doc ~options)))
+     (fetch-and-replace-method (get-collection ~coll) ~query ~doc ~options)))
+
+(defmacro replace-by-id!
+  "Replace a single document by its id.
+
+   | Parameter    | Description
+   | ---          | ---
+   | `collection` | `keyword/string` The collection.
+   | `id`         | Document id.
+   | `document`   | `map` The new document.
+
+   **Returns**
+
+   ```clojure
+   {:matched-count <0 or 1>
+    :modified-count <0 or 1>}
+   ```"
+  {:added "1.0"
+   :arglists '([<collection> <id> <document>])}
+  [coll id doc]
+  `(catch-return
+     (*replace-guard* ~doc)
+     (by-id
+       (replace-method (get-collection ~coll) {:_id ~id} ~doc))))
+
+(defmacro fetch-and-replace-by-id!
+  {:added "1.0"}
+  [coll id doc & {:as options}]
+  (assert-keys options #{:only :return-new?})
+  `(catch-return
+     (*replace-guard* ~doc)
+     (by-id
+       (fetch-and-replace-method (get-collection ~coll) {:_id ~id} ~doc ~options))))
 
 ; ------------------------
 ; Delete
@@ -889,11 +1032,11 @@
    :arglists '([<collection> <query> & :collation <collation object> :hint {}])}
   [coll query & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(delete-method ~coll ~query ~options))
+  `(delete-method (get-collection ~coll) ~query ~options))
 
 (defmacro delete-one!
   "Delete first matching document.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` The collection.
@@ -910,13 +1053,38 @@
    :arglists '([<collection> <query> & :collation <collation object> :hint {}])}
   [coll query & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(delete-one-method ~coll ~query ~options))
+  `(delete-one-method (get-collection ~coll) ~query ~options))
 
 (defmacro fetch-and-delete-one!
   {:added "1.0"}
   [coll query & {:as options}]
   (assert-keys options #{:collation :hint})
-  `(fetch-and-delete-method ~coll ~query ~options))
+  `(fetch-and-delete-method (get-collection ~coll) ~query ~options))
+
+(defmacro delete-by-id!
+  "Delete document by its id.
+
+   | Parameter    | Description
+   | ---          | ---
+   | `collection` | `keyword/string` The collection.
+   | `id`         | Document id.
+
+   **Returns**
+
+   ```clojure
+   {:deleted-count <0 or 1>}
+   ```"
+  {:added "1.0"
+   :arglists '([<collection> <id>])}
+  [coll id]
+  `(by-id
+     (delete-one-method (get-collection ~coll) {:_id ~id})))
+
+(defmacro fetch-and-delete-by-id!
+  {:added "1.0"}
+  [coll id]
+  `(by-id
+     (fetch-and-delete-method (get-collection ~coll) {:_id ~id})))
 
 ; ------------------------
 ; Transaction
@@ -931,7 +1099,7 @@
    The result of the last encapsulated expression.
 
    **Examples**
-   
+
    ```clojure
    (transaction
      (insert! :users {:name \"My Name\"})
@@ -953,7 +1121,7 @@
 
 (defn aggregate
   "MongoDB aggregation.
-   
+
    | Parameter    | Description
    | ---          | ---
    | `collection` | `keyword/string` Collection name.
@@ -964,7 +1132,7 @@
    Aggregation result.
 
    **Examples**
-   
+
    ```clojure
    (aggregate :users
      {:$match {:age {:$gte 20}}}
@@ -975,4 +1143,4 @@
    :arglists '([<collection> & <pipeline>])}
   [coll & pipeline]
   {:pre [coll pipeline]}
-  (aggregate-method coll pipeline))
+  (aggregate-method (get-collection coll) pipeline))
