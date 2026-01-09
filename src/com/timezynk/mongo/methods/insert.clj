@@ -1,7 +1,6 @@
 (ns ^:no-doc com.timezynk.mongo.methods.insert
   (:require
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.hooks :refer [*read-hook*]]
    [com.timezynk.mongo.padding :refer [*insert-padding*]])
   (:import [com.mongodb.client.result
@@ -54,19 +53,13 @@
      :many    (sequential? docs)}))
 
 (defmethod insert-method {:session true :many true} [coll docs]
-  (.insertMany (h/get-collection coll)
-               *mongo-session*
-               docs))
+  (.insertMany coll *mongo-session* docs))
 
 (defmethod insert-method {:session true :many false} [coll doc]
-  (.insertOne (h/get-collection coll)
-              *mongo-session*
-              doc))
+  (.insertOne coll *mongo-session* doc))
 
 (defmethod insert-method {:session false :many true} [coll docs]
-  (.insertMany (h/get-collection coll)
-               docs))
+  (.insertMany coll docs))
 
 (defmethod insert-method {:session false :many false} [coll doc]
-  (.insertOne (h/get-collection coll)
-              doc))
+  (.insertOne coll doc))

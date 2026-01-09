@@ -11,11 +11,19 @@
       (throw (AssertionError. (str "Function call contains invalid key: "
                                    k " => " valid-keys))))))
 
+(defn assert-value
+  "Called from inside a macro. Validates a parameter at compile-time."
+  [v valid-keys]
+  (and v
+       (not (contains? valid-keys v))
+       (throw (AssertionError. (str "Function call has invalid parameter: "
+                                    v " => " valid-keys)))))
+
 (defmacro catch-assert
   "For testing compile-time assertion.
-   
+
    **Returns**
-   
+
     0 <- Call went through without exceptions.
     1 <- Assertion caused compiler exception.
    -1 <- Other compiler exception or general exception."
@@ -24,7 +32,7 @@
     (eval body)
     0
     (catch Compiler$CompilerException e
-      (if (re-find #"Function call contains invalid key"
+      (if (re-find #"Function call contains invalid key|Function call has invalid parameter"
                    (-> e .getCause .getMessage))
         1
         -1))

@@ -3,7 +3,6 @@
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
    [com.timezynk.mongo.convert :refer [list->map]]
-   [com.timezynk.mongo.helpers :as h]
    [com.timezynk.mongo.hooks :refer [*read-hook*]]
    [com.timezynk.mongo.padding :refer [*update-padding*]])
   (:import [com.mongodb.client.model UpdateOptions]
@@ -43,7 +42,7 @@
     (some? *mongo-session*)))
 
 (defmethod update-method true [coll query update options]
-  (-> (.updateMany (h/get-collection coll)
+  (-> (.updateMany coll
                    *mongo-session*
                    (->bson query)
                    (->bson (*update-padding* update))
@@ -51,7 +50,7 @@
       (update-result)))
 
 (defmethod update-method false [coll query update options]
-  (-> (.updateMany (h/get-collection coll)
+  (-> (.updateMany coll
                    (->bson query)
                    (->bson (*update-padding* update))
                    (update-options options))
@@ -63,7 +62,7 @@
     (some? *mongo-session*)))
 
 (defmethod update-one-method true [coll query update options]
-  (-> (.updateOne (h/get-collection coll)
+  (-> (.updateOne coll
                   *mongo-session*
                   (->bson query)
                   (->bson (*update-padding* update))
@@ -71,7 +70,7 @@
       (update-result)))
 
 (defmethod update-one-method false [coll query update options]
-  (-> (.updateOne (h/get-collection coll)
+  (-> (.updateOne coll
                   (->bson query)
                   (->bson (*update-padding* update))
                   (update-options options))

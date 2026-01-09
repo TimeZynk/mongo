@@ -1,7 +1,8 @@
 (ns ^:no-doc com.timezynk.mongo.convert
   (:require
    [com.timezynk.mongo.codecs.map :refer [map-codec]]
-   [com.timezynk.mongo.config :refer [*mongo-database*]])
+   [com.timezynk.mongo.config :refer [*mongo-database*]]
+   [com.timezynk.mongo.hooks :refer [*read-hook*]])
   (:import [clojure.lang PersistentArrayMap PersistentVector]
            [com.mongodb.client.gridfs.model GridFSFile]
            [org.bson BsonDateTime BsonDocument BsonDocumentWrapper]
@@ -48,13 +49,14 @@
       (:v)))
 
 (defn file->clj [^GridFSFile file]
-  {:chunk-size (.getChunkSize file)
-   :file-name  (.getFilename  file)
-   :_id        (.getObjectId  file)
-   :length     (.getLength    file)
-   :metadata   (when-let [metadata (.getMetadata file)]
-                 (decode-document metadata))
-   :upload-date (-> (.getUploadDate file)
-                    (.getTime)
-                    (BsonDateTime.)
-                    (decode-bson-value))})
+  (merge (-> {:_id (.getObjectId file)}
+             (*read-hook*))
+         {:chunk-size  (.getChunkSize file)
+          :filename    (.getFilename  file)
+          :length      (.getLength    file)
+          :upload-date (-> (.getUploadDate file)
+                           (.getTime)
+                           (BsonDateTime.)
+                           (decode-bson-value))}
+         (when-let [metadata (.getMetadata file)]
+           {:metadata (decode-document metadata)})))

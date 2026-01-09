@@ -106,14 +106,14 @@
 
 (defmacro id
   "Field must be an `ObjectId`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
    | `:description` | `optional string` Description for validation errors.
 
    **Examples**
-   
+
    ```clojure
    ; field-1 must be an ObjectId and can be excluded:
    (create-collection! :coll :schema {:field-1 (id :optional? true)})
@@ -128,7 +128,7 @@
 
 (defmacro string
   "Field must be a `string`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
@@ -139,7 +139,7 @@
    | `:max-length`  | `optional integer` Maximum length of the string.
 
    **Examples**
-   
+
    ```clojure
    ; field-1 must be a string and must be included:
    (create-collection! :coll :schema {:field-1 (string)})
@@ -159,7 +159,7 @@
 
 (defmacro number
   "Field must be an 8-byte `double`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
@@ -169,7 +169,7 @@
    | `:max`         | `optional integer` Maximum value.
 
    **Examples**
-   
+
    ```clojure
    ; field-1 must be a number and must be included:
    (create-collection! :coll :schema {:field-1 (number)})
@@ -188,7 +188,7 @@
 
 (defmacro integer
   "Field must be an 8-byte `long integer`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
@@ -198,7 +198,7 @@
    | `:max`         | `optional integer` Maximum value.
 
    **Examples**
-   
+
    ```clojure
    ; field-1 must be an integer and must be included:
    (create-collection! :coll :schema {:field-1 (integer)})
@@ -217,14 +217,14 @@
 
 (defmacro timestamp
   "Field must be a `timestamp`, i.e. a positive `long integer`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
    | `:description` | `optional string` Description for validation errors.
 
    **Examples**
-   
+
    ```clojure
    ; field-1 must be an integer and must be included:
    (create-collection! :coll :schema {:field-1 (timestamp)})
@@ -240,14 +240,14 @@
 
 (defmacro boolean
   "Field must be a `boolean`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
    | `:description` | `optional string` Description for validation errors.
 
    **Examples**
-   
+
    ```clojure
    ; field-1 must be a boolean and must be included:
    (create-collection! :coll :schema {:field-1 (boolean)})
@@ -262,14 +262,14 @@
 
 (defmacro date-time
   "Field must be a valid date-time object, default `java.util.Date`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
    | `:description` | `optional string` Description for validation errors.
 
    **Examples**
-   
+
    ```clojure
    ; Set field-1 to current date and time:
    (create-collection! :coll :schema {:field-1 (date-time)})
@@ -284,14 +284,14 @@
 
 (defmacro map
   "Field must be a `map`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `:optional?`   | `optional boolean` Is the field optional?
    | `:description` | `optional string` Description for validation errors.
 
    **Examples**
-   
+
    ```clojure
    ; Set field-1 to map containing two strings:
    (create-collection! :coll :schema {:field-1 (map {:str-1 (string)
@@ -307,7 +307,7 @@
 
 (defmacro array
   "Field must be an `array`.
-   
+
    | Parameter      | Description
    | ---            | ---
    | `schema`       | `fn` A call to a schema function.
@@ -318,7 +318,7 @@
    | `:unique?`     | `optional boolean` Whether array values must be unique.
 
    **Examples**
-   
+
    ```clojure
    ; field-1 must be an array of strings and contain at least one element:
    (create-collection! :coll :schema {:field-1 (array (string) :min-length 1)})
@@ -341,13 +341,13 @@
 
 (defmacro any
   "Field can be of any type.
-   
+
    | Parameter     | Description
    | ---           | ---
    | `:optional?`  | `optional boolean` Is the field optional?
 
    **Examples**
-   
+
    ```clojure
    (create-collection! :coll :schema {:field-1 (any)})
    ```"

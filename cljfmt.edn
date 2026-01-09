@@ -1,5 +1,8 @@
 {:extra-indents {aggregate    [[:block 1]]
+                 by-id        [[:block 0]]
+                 catch-assert [[:block 0]]
                  catch-return [[:block 0]]
+                 file-hooks   [[:block 0]]
                  ignore-hooks [[:block 0]]
                  transaction  [[:block 0]]
                  with-codecs  [[:block 2]]

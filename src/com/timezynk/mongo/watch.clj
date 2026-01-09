@@ -13,7 +13,7 @@
 
 (defmacro on-insert
   "Listen for an `insert!` event.
-   
+
    | Parameter           | Description
    | ---                 | ---
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
@@ -23,13 +23,13 @@
    |                     | `map` The inserted document.
    | `:collation`        | `optional collation object` Collation used.
    | `:filter`           | `optional map` Filter query.
-   
+
    **Returns**
 
    Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
 
    **Examples**
-   
+
    ```clojure
    (defn insert-event [coll time doc]
      ; Do something
@@ -45,7 +45,7 @@
 
 (defmacro on-update
   "Listen for an `update!` event.
-   
+
    | Parameter           | Description
    | ---                 | ---
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
@@ -57,13 +57,13 @@
    | `:collation`        | `optional collation object` Collation used.
    | `:filter`           | `optional map` Filter query.
    | `:full?`            | `optional boolean` (>= v6.0) Return complete documents after and before change.
-   
+
    **Returns**
 
    Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
 
    **Examples**
-   
+
    ```clojure
    (defn update-event [coll time updated-fields]
      ; Do something
@@ -79,7 +79,7 @@
 
 (defmacro on-replace
   "Listen for a `replace!` event.
-   
+
    | Parameter           | Description
    | ---                 | ---
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
@@ -90,13 +90,13 @@
    | `:collation`        | `optional collation object` Collation used.
    | `:filter`           | `optional map` Filter query.
    | `:full?`            | `optional boolean` (>= v6.0) Return complete documents after and before change.
-   
+
    **Returns**
 
    Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
 
    **Examples**
-   
+
    ```clojure
    (defn update-event [coll time updated-fields]
      ; Do something
@@ -112,7 +112,7 @@
 
 (defmacro on-delete
   "Listen for an `update!` event.
-   
+
    | Parameter           | Description
    | ---                 | ---
    | `collection`        | `keyword/string/nil` The collection. If `nil` it is set for the database.
@@ -120,13 +120,13 @@
    |                     | `java.util.Date/custom` Time of event, codec-dependent format.
    |                     | `map` Contains either a single `_id` field with the id of the deleted document, or the entire deleted document.
    | `:full?`            | `optional boolean` (>= v6.0) Return complete deleted document.
-   
+
    **Returns**
 
    Watch id, which is also the id of the watcher daemon thread. The id is used to close the watcher.
 
    **Examples**
-   
+
    ```clojure
    (defn delete-event [coll time id]
      ; Do something

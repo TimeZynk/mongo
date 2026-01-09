@@ -1,4 +1,4 @@
-(ns com.timezynk.mongo.test.watch-replace
+(ns com.timezynk.mongo.test.watchers.replace
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.timezynk.mongo :as m]

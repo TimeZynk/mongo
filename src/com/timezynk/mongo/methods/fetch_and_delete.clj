@@ -2,8 +2,7 @@
   (:require
    [com.timezynk.mongo.codecs.bson :refer [->bson]]
    [com.timezynk.mongo.config :refer [*mongo-session*]]
-   [com.timezynk.mongo.convert :refer [list->map]]
-   [com.timezynk.mongo.helpers :as h])
+   [com.timezynk.mongo.convert :refer [list->map]])
   (:import [org.bson Document]
            [com.mongodb.client.model FindOneAndDeleteOptions]))
 
@@ -19,12 +18,12 @@
     (some? *mongo-session*)))
 
 (defmethod fetch-and-delete-method true [coll query options]
-  (.findOneAndDelete (h/get-collection coll)
+  (.findOneAndDelete coll
                      *mongo-session*
                      query
                      (fetch-and-delete-options options)))
 
 (defmethod fetch-and-delete-method false [coll query options]
-  (.findOneAndDelete (h/get-collection coll)
+  (.findOneAndDelete coll
                      query
                      (fetch-and-delete-options options)))

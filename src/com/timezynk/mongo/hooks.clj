@@ -11,15 +11,15 @@
    for the query and for the payload.
 
    The hook is applied recursively to nested documents.
-   
+
    | Parameter | Description
    | ---       | ---
    | `:read`   | `optional fn` Called when returning a document from MongoDB.
    | `:write`  | `optional fn` Called for a query or payload to MongoDB.
    | `body`    | Encapsulated program calling the database.
-   
+
    **Examples**
-   
+
    ```clojure
    ; When a document is written to the database, replace the field 'name' with 'username':
    (with-hooks {:write #(clojure.set/rename-keys % {:name :username})}

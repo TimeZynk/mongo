@@ -8,7 +8,7 @@
 
 (defn add-watch-id
   "Create an entry from the current connection, operation type, and function.
-   
+
    **Returns**
 
    `true` if an entry was created.
