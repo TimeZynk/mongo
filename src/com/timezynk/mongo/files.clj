@@ -5,8 +5,10 @@
    [com.timezynk.mongo.convert :refer [file->clj]]
    [com.timezynk.mongo.file-methods.delete :refer [delete-method delete-by-id-method delete-by-query-method]]
    [com.timezynk.mongo.file-methods.download :refer [download-method download-by-id-method download-by-query-method download-array-method download-array-by-id-method]]
+   [com.timezynk.mongo.file-methods.download-stream :refer [download-stream-method download-stream-by-id-method]]
    [com.timezynk.mongo.file-methods.rename :refer [rename-method rename-by-id-method]]
    [com.timezynk.mongo.file-methods.upload :refer [upload-method]]
+   [com.timezynk.mongo.file-methods.upload-stream :refer [upload-stream-method]]
    [com.timezynk.mongo.helpers :refer [file-hooks get-filebucket]]
    [com.timezynk.mongo.methods.drop-collection :refer [drop-collection-method]]
    [com.timezynk.mongo.methods.fetch :refer [fetch-method]]))
@@ -165,7 +167,7 @@
    `(file-hooks
       (download-by-query-method (get-filebucket ~bucket) (->bson ~query) ~options))))
 
-(defmacro download-array!
+(defmacro download-array
   "Download a single file from database to a byte array.
 
    | Parameter       | Description
@@ -180,12 +182,12 @@
   {:added "1.0"
    :arglists '([<database-file>]
                [<bucket> <database-file> & :revision <integer>])}
-  ([database-file] `(download-array! nil ~database-file))
+  ([database-file] `(download-array nil ~database-file))
   ([bucket database-file  & {:as options}]
    (assert-keys options #{:revision})
    `(download-array-method (get-filebucket ~bucket) ~database-file ~options)))
 
-(defmacro download-array-by-id!
+(defmacro download-array-by-id
   "Download a single file from database to a byte array.
 
    | Parameter | Description
@@ -199,8 +201,45 @@
   {:added "1.0"
    :arglists '([<id>]
                [<bucket> <id>])}
-  ([id]        `(download-array-by-id! nil ~id))
+  ([id]        `(download-array-by-id nil ~id))
   ([bucket id] `(download-array-by-id-method (get-filebucket ~bucket) ~id)))
+
+(defmacro download-stream
+  "Create a stream for downloading a file.
+
+   | Parameter       | Description
+   | ---             | ---
+   | `bucket`        | `keyword/string/nil` The bucket name. If not set or `nil` use the default database bucket.
+   | `database-file` | `string` Name of file in database.
+   | `:revision`     | `optional integer` File revision.
+
+   **Returns**
+
+   Download stream."
+  {:added "1.0"
+   :arglists '([<database-file>]
+               [<bucket> <database-file> & :revision <integer>])}
+  ([database-file] `(download-stream nil ~database-file))
+  ([bucket database-file  & {:as options}]
+   (assert-keys options #{:revision})
+   `(download-stream-method (get-filebucket ~bucket) ~database-file ~options)))
+
+(defmacro download-stream-by-id
+  "Create a stream for downloading a file.
+
+   | Parameter | Description
+   | ---       | ---
+   | `bucket`  | `keyword/string/nil` The bucket name. If not set or `nil` use the default database bucket.
+   | `id`      | `ObjectId` Id of file in database.
+
+   **Returns**
+
+   Download stream."
+  {:added "1.0"
+   :arglists '([<id>]
+               [<bucket> <id>])}
+  ([id]        `(download-stream-by-id nil ~id))
+  ([bucket id] `(download-stream-by-id-method (get-filebucket ~bucket) ~id)))
 
 (defmacro upload!
   "Upload file to database.
@@ -210,8 +249,8 @@
    | `bucket`        | `keyword/string/nil` The bucket name. If not set or `nil` use the default database bucket.
    | `input`         | `string/byte[]/stream` The input to store, either a file name, byte array, or input stream.
    | `database-file` | `string/nil` File name to store in database. If not set or `nil` use the input string.
-   | `:chunk-size`   | `optional integer` Chunk size in bytes.
    | `:_id`          | `optional ObjectId` Custom file id.
+   | `:chunk-size`   | `optional integer` Chunk size in bytes.
    | `:metadata`     | `optional map` File metadata.
    | `:prune?`       | `optional boolean` Remove previous revisions. Default false.
 
@@ -220,12 +259,34 @@
    `ObjectId` of the created file."
   {:added "1.0"
    :arglists '([<input> <database-file>]
-               [<bucket> <input> <database-file> & :chunk-size <integer> :metadata {}])}
-  ([input] `(upload! nil ~input nil))
+               [<bucket> <input> <database-file> & :_id <ObjectId> :chunk-size <integer> :metadata {} :prune? <boolean>])}
+  ([input]               `(upload! nil ~input nil))
   ([input database-file] `(upload! nil ~input ~database-file))
   ([bucket input database-file & {:as options}]
-   (assert-keys options #{:chunk-size :_id :metadata :prune?})
+   (assert-keys options #{:_id :chunk-size :metadata :prune?})
    `(upload-method (get-filebucket ~bucket) ~input (or ~database-file ~input) ~options)))
+
+(defmacro upload-stream
+  "Create a stream for uploading a file.
+
+   | Parameter       | Description
+   | ---             | ---
+   | `bucket`        | `keyword/string/nil` The bucket name. If not set or `nil` use the default database bucket.
+   | `database-file` | `string` File name to store in database.
+   | `:_id`          | `optional ObjectId` Custom file id.
+   | `:chunk-size`   | `optional integer` Chunk size in bytes.
+   | `:metadata`     | `optional map` File metadata.
+
+   **Returns**
+
+   Upload stream."
+  {:added "1.0"
+   :arglists '([<database-file>]
+               [<bucket> <database-file> & :_id <ObjectId> :chunk-size <integer> :metadata {}])}
+  ([database-file] `(upload-stream nil ~database-file))
+  ([bucket database-file & {:as options}]
+   (assert-keys options #{:_id :chunk-size :metadata})
+   `(upload-stream-method (get-filebucket ~bucket) ~database-file ~options)))
 
 (defmacro delete!
   "Delete files in database.

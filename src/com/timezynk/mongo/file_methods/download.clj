@@ -14,7 +14,7 @@
       (.revision revision)))
 
 (defmulti download-stream
-  (fn [^GridFSBucket _bucket ^String _file ^OutputStream _stream options]
+  (fn [^GridFSBucket _bucket _file ^OutputStream _stream options]
     {:session (some? *mongo-session*)
      :options (coll? options)}))
 

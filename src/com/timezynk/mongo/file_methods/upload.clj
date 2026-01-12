@@ -12,7 +12,7 @@
            [org.bson.codecs DocumentCodec DecoderContext]
            [org.bson.types ObjectId]))
 
-(defn- upload-options [{:keys [chunk-size metadata]}]
+(defn upload-options [{:keys [chunk-size metadata]}]
   (cond-> (GridFSUploadOptions.)
     chunk-size (.chunkSizeBytes chunk-size)
     metadata   (.metadata (.decode (DocumentCodec.)
@@ -54,16 +54,16 @@
 (defmethod ->stream InputStream [input-stream]
   input-stream)
 
-(defn upload-method [^GridFSBucket bucket input database-file {:keys [_id] :as options}]
+(defn upload-method [^GridFSBucket bucket input database-file {:keys [_id prune?] :as options}]
   {:pre [(= (type database-file) String)
          (or (nil? _id)
              (= (type _id) ObjectId))]}
   (with-open [stream (->stream input)]
     (let [id (upload bucket database-file stream options)]
-      (when (:prune? options)
+      (when prune?
         (ignore-hooks
           (delete-by-query-method bucket
                                   {:filename database-file}
                                   {:sort {:uploadDate -1}
                                    :skip 1})))
-      id)))
+      (or id _id))))

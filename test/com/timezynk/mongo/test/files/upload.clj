@@ -32,19 +32,19 @@
                   (map char)
                   (apply str)))))))
 
-(deftest upload-file
+(deftest upload-from-file
   (try
     (spit f-name file-content)
     (check-file (mf/upload! bucket f-name db-name))
     (finally
       (io/delete-file f-name :silently))))
 
-(deftest upload-array
+(deftest upload-from-array
   (check-file (mf/upload! bucket
                           (.getBytes file-content)
                           db-name)))
 
-(deftest upload-stream
+(deftest upload-from-stream
   (check-file (mf/upload! bucket
                           (io/input-stream (.getBytes file-content))
                           db-name)))
@@ -64,8 +64,13 @@
 (deftest upload-with-id
   (let [id (ObjectId.)]
     (mh/with-hooks {:read #(set/rename-keys % {:_id :id})}
-      (is (nil? (mf/upload! nil (.getBytes "ABC") db-name :_id id)))
-      (is (= id
-             (-> (mf/info)
-                 (first)
-                 (:id)))))))
+      (is (= id (mf/upload! nil (.getBytes "ABC") db-name :_id id)))
+      (is (= id (-> (mf/info)
+                    (first)
+                    (:id)))))))
+
+(deftest upload-stream
+  (let [id (ObjectId.)]
+    (with-open [stream (mf/upload-stream bucket db-name :_id id)]
+      (.write stream (.getBytes file-content)))
+    (check-file id)))

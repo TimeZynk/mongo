@@ -45,11 +45,11 @@
   (mf/upload! (.getBytes "A") "file-1")
   (mf/upload! (.getBytes "B") "file-1")
   (testing "Latest revision"
-    (is (= "B" (mu/->string (mf/download-array! "file-1")))))
+    (is (= "B" (mu/->string (mf/download-array "file-1")))))
   (testing "First revision"
-    (is (= "A" (mu/->string (mf/download-array! nil "file-1" :revision 0)))))
+    (is (= "A" (mu/->string (mf/download-array nil "file-1" :revision 0)))))
   (testing "Second revision"
-    (is (= "B" (mu/->string (mf/download-array! nil "file-1" :revision 1)))))
+    (is (= "B" (mu/->string (mf/download-array nil "file-1" :revision 1)))))
   (try
     (testing "Revision doesn't exist"
       (is (thrown? MongoGridFSException
@@ -60,17 +60,39 @@
       (io/delete-file "file-1" :silently))))
 
 (deftest download-by-query
-  (mf/upload! (.getBytes "A") "temp-file-1")
-  (mf/upload! (.getBytes "B") "temp-file-1")
-  (mf/upload! (.getBytes "C") "temp-file-2")
-  (mf/upload! (.getBytes "DE") "temp-file-3")
+  (mf/upload! (.getBytes "A") "file-1")
+  (mf/upload! (.getBytes "B") "file-1")
+  (mf/upload! (.getBytes "C") "file-2")
+  (mf/upload! (.getBytes "DE") "file-3")
   (try
     (mf/download-by-query! {:length 1})
-    (is (= "B" (slurp "temp-file-1")))
-    (is (= "C" (slurp "temp-file-2")))
+    (is (= "B" (slurp "file-1")))
+    (is (= "C" (slurp "file-2")))
     (is (thrown? FileNotFoundException
-                 (slurp "temp-file-3")))
+                 (slurp "file-3")))
     (finally
-      (io/delete-file "temp-file-1" :silently)
-      (io/delete-file "temp-file-2" :silently)
-      (io/delete-file "temp-file-3" :silently))))
+      (io/delete-file "file-1" :silently)
+      (io/delete-file "file-2" :silently)
+      (io/delete-file "file-3" :silently))))
+
+(deftest download-array-by-id
+  (let [id-1 (mf/upload! (.getBytes "A") "file-1")
+        id-2 (mf/upload! (.getBytes "B") "file-1")]
+    (is (= "B" (mu/->string (mf/download-array-by-id id-2))))
+    (is (= "A" (mu/->string (mf/download-array-by-id id-1))))))
+
+(deftest download-stream
+  (mf/upload! (.getBytes "A") "file-1")
+  (mf/upload! (.getBytes "B") "file-1")
+  (with-open [stream (mf/download-stream "file-1")]
+    (is (= "B" (mu/->string (.readAllBytes stream)))))
+  (with-open [stream (mf/download-stream nil "file-1" :revision 0)]
+    (is (= "A" (mu/->string (.readAllBytes stream))))))
+
+(deftest download-stream-by-id
+  (let [id-1 (mf/upload! (.getBytes "A") "file-1")
+        id-2 (mf/upload! (.getBytes "B") "file-1")]
+    (with-open [stream (mf/download-stream-by-id id-2)]
+      (is (= "B" (mu/->string (.readAllBytes stream)))))
+    (with-open [stream (mf/download-stream-by-id id-1)]
+      (is (= "A" (mu/->string (.readAllBytes stream)))))))
